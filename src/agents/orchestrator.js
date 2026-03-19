@@ -39,6 +39,19 @@ class OrchestratorAgent extends BaseAgent {
 
     this.log('goal_received', { goal });
 
+    // Step 0: Verify wallet balance before starting
+    try {
+      const balResult = await this.getBalance();
+      const balance = parseFloat(balResult.data?.data?.usdc_balance || balResult.data?.usdc_balance || '0');
+      this.log('balance_verified', { balance, wallet: this.walletAddress });
+      if (balance < 0.01) {
+        throw new Error(`Orchestrator wallet balance too low ($${balance.toFixed(2)} USDC). Fund wallet before running goals.`);
+      }
+    } catch (err) {
+      if (err.message.includes('too low')) throw err;
+      // Balance check failed but don't block execution
+    }
+
     // Step 1: Plan subtasks
     const subtasks = this._planSubtasks(goal);
     this.log('subtasks_planned', { count: subtasks.length });
@@ -72,7 +85,7 @@ class OrchestratorAgent extends BaseAgent {
         budget: task.payment,
       });
 
-      // Try escrow flow first, fallback to direct payment
+      // Step A: Create escrow (checkout session) before work starts
       let escrowSession = null;
       if (this.escrowManager) {
         try {
@@ -81,16 +94,20 @@ class OrchestratorAgent extends BaseAgent {
             description: task.description,
             buyerAgent: this.name,
             sellerAgent: agent.name,
-            webhookUrl: `${process.env.DEPLOYED_URL || 'http://localhost:3000'}/api/webhooks/checkout`,
             metadata: { goal, taskType: task.type },
           });
+
+          // Worker agent verifies the escrow via preflight
+          if (escrowSession?.sessionId) {
+            await this.escrowManager.preflight(agent.locus, escrowSession.sessionId);
+          }
         } catch (err) {
-          this.log('escrow_fallback', { error: err.message });
-          // Continue without escrow
+          // Escrow creation/preflight failed, fall back to direct payment
+          escrowSession = null;
         }
       }
 
-      // Execute the task
+      // Step B: Execute the task (work happens while funds are in escrow)
       let taskResult;
       try {
         if (task.type === 'research') {
@@ -101,14 +118,14 @@ class OrchestratorAgent extends BaseAgent {
           results.report = taskResult;
         }
       } catch (err) {
-        this.log('task_execution_failed', { error: err.message, task: task.description });
+        this.log('task_failed', { error: err.message, task: task.description });
         task.status = 'execution_failed';
         task.error = err.message;
         this.tasks.push(task);
         continue;
       }
 
-      // Pay the agent — try escrow release first, then direct payment
+      // Step C: Release payment — escrow release or direct payment
       try {
         if (escrowSession?.sessionId) {
           await this.escrowManager.releasePayment(this.locus, escrowSession.sessionId);

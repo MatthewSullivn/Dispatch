@@ -15,8 +15,20 @@ class WriterAgent extends BaseAgent {
 
     // Try multiple LLM providers via Locus wrapped APIs
     const providers = [
-      { name: 'gemini', endpoint: 'chat', body: { model: 'gemini-2.0-flash', messages: [{ role: 'user', content: prompt }] } },
-      { name: 'grok', endpoint: 'chat', body: { model: 'grok-3-mini-fast', messages: [{ role: 'system', content: 'You are a professional report writer.' }, { role: 'user', content: prompt }] } },
+      { name: 'gemini', endpoint: 'chat', body: {
+        model: 'gemini-2.5-flash',
+        systemInstruction: 'You are a professional report writer. Produce clear, well-structured reports with actionable takeaways.',
+        messages: [{ role: 'user', content: prompt }],
+        maxOutputTokens: 4096,
+        temperature: 0.7,
+      }},
+      { name: 'grok', endpoint: 'chat', body: {
+        model: 'grok-3-mini-fast',
+        messages: [
+          { role: 'system', content: 'You are a professional report writer. Produce clear, well-structured reports with actionable takeaways.' },
+          { role: 'user', content: prompt },
+        ],
+      }},
     ];
 
     for (const provider of providers) {
@@ -61,18 +73,33 @@ class WriterAgent extends BaseAgent {
         const scraped = typeof f.scrapedData === 'string'
           ? f.scrapedData.slice(0, 3000)
           : JSON.stringify(f.scrapedData).slice(0, 3000);
-        content += `Scraped content:\n${scraped}\n\n`;
+        content += `Scraped content (via Firecrawl):\n${scraped}\n\n`;
       }
       if (f.searchResults) {
         const search = typeof f.searchResults === 'string'
           ? f.searchResults.slice(0, 3000)
           : JSON.stringify(f.searchResults).slice(0, 3000);
-        content += `Search results:\n${search}\n\n`;
+        content += `Search results (via Exa):\n${search}\n\n`;
+      }
+      if (f.supplementaryResults) {
+        const supp = typeof f.supplementaryResults === 'string'
+          ? f.supplementaryResults.slice(0, 2000)
+          : JSON.stringify(f.supplementaryResults).slice(0, 2000);
+        content += `Supplementary results (via Firecrawl):\n${supp}\n\n`;
       }
       return content;
     });
 
-    return `Based on the following research findings, create a clear, professional ${format} with key insights and actionable takeaways:\n\n${sections.join('\n')}`;
+    const today = new Date().toISOString().split('T')[0];
+    return `Based on the following research findings, create a clear, professional ${format} with key insights and actionable takeaways.
+
+IMPORTANT: Do NOT use placeholder text like "[Your Name]", "[Current Date]", "[Your Contact Information]", or "[Link]". Instead:
+- Use "Agent Mesh Research Team" as the author
+- Use "${today}" as the date
+- For source links, use the actual URLs from the research data if available, or omit the links section
+- Do not include a contact information line
+
+Research findings:\n\n${sections.join('\n')}`;
   }
 
   _fallbackSummary(findings) {

@@ -10,8 +10,9 @@ class ResearchAgent extends BaseAgent {
 
     let scrapedData = null;
     let searchResults = null;
+    let supplementaryResults = null;
 
-    // If query is a URL, scrape it. Otherwise use search APIs.
+    // If query is a URL, scrape it via Firecrawl
     const isUrl = query.startsWith('http://') || query.startsWith('https://');
 
     if (isUrl) {
@@ -21,14 +22,13 @@ class ResearchAgent extends BaseAgent {
           formats: ['markdown'],
         });
         scrapedData = scrapeResult.data;
-        this.log('scrape_completed', { source: query });
+        this.log('firecrawl_scrape_completed', { source: query });
       } catch (err) {
-        this.log('scrape_failed', { error: err.message });
+        this.log('firecrawl_scrape_failed', { error: err.message });
       }
     }
 
-    // Always run a search
-    // Try Exa first
+    // Primary search via Exa (semantic search)
     try {
       const exaResult = await this.callAPI('exa', 'search', {
         query: isUrl ? `site:${query}` : query,
@@ -38,30 +38,30 @@ class ResearchAgent extends BaseAgent {
       this.log('exa_search_completed', { resultCount: 5 });
     } catch (err) {
       this.log('exa_search_failed', { error: err.message });
+    }
 
-      // Fallback: try Grok web search
+    // Supplementary search via Firecrawl (web scraping search)
+    if (!isUrl) {
       try {
-        const grokResult = await this.callAPI('grok', 'web-search', {
-          query,
-        });
-        searchResults = grokResult.data;
-        this.log('grok_search_completed', { query });
-      } catch (err2) {
-        this.log('grok_search_failed', { error: err2.message });
+        const fcResult = await this.callAPI('firecrawl', 'search', { query });
+        supplementaryResults = fcResult.data;
+        this.log('firecrawl_search_completed', { query });
+      } catch (err) {
+        // Firecrawl search is supplementary, don't log failure to timeline
       }
     }
 
-    // Try Firecrawl search as another option
-    if (!searchResults && !isUrl) {
+    // Fallback if neither Exa nor Firecrawl returned results
+    if (!searchResults && !supplementaryResults) {
       try {
-        const fcResult = await this.callAPI('firecrawl', 'search', {
-          query,
-          limit: 5,
+        const grokResult = await this.callAPI('grok', 'web-search', {
+          model: 'grok-3-mini-fast',
+          messages: [{ role: 'user', content: `Search the web for: ${query}` }],
         });
-        searchResults = fcResult.data;
-        this.log('firecrawl_search_completed', { query });
+        searchResults = grokResult.data;
+        this.log('grok_search_completed', { query });
       } catch (err) {
-        this.log('firecrawl_search_failed', { error: err.message });
+        this.log('grok_search_failed', { error: err.message });
       }
     }
 
@@ -69,6 +69,7 @@ class ResearchAgent extends BaseAgent {
       query,
       scrapedData,
       searchResults,
+      supplementaryResults,
       timestamp: new Date().toISOString(),
     };
 
@@ -76,6 +77,8 @@ class ResearchAgent extends BaseAgent {
       query,
       hasScrapedData: !!scrapedData,
       hasSearchResults: !!searchResults,
+      hasSupplementary: !!supplementaryResults,
+      providers: [scrapedData && 'firecrawl-scrape', searchResults && 'exa', supplementaryResults && 'firecrawl-search'].filter(Boolean),
     });
     return findings;
   }

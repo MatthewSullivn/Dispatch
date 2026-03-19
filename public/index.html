@@ -4,184 +4,566 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agent Mesh — Autonomous Agent Marketplace</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #0a0a0f; color: #c8c8d0; }
-    .wrap { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
-    header { display: flex; align-items: baseline; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid #1a1a2e; margin-bottom: 20px; }
-    header h1 { font-size: 20px; color: #00d4aa; font-weight: 500; }
-    .badge { font-size: 10px; background: #00d4aa; color: #0a0a0f; padding: 2px 6px; border-radius: 3px; font-weight: 700; }
-    .badge.base { background: #0052ff; color: #fff; }
-    header .sub { font-size: 11px; color: #444; margin-left: auto; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #08080d;
+      color: #c8c8d0;
+      min-height: 100vh;
+    }
+
+    code, .mono { font-family: 'JetBrains Mono', 'Consolas', monospace; }
+
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 48px 0 40px;
+      position: relative;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #00d4aa33, transparent);
+    }
+    .hero h1 {
+      font-size: 36px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .hero h1 span { color: #00d4aa; }
+    .hero .tagline {
+      font-size: 15px;
+      color: #666;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+    .hero .badges {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .badge.locus { background: #00d4aa15; color: #00d4aa; border: 1px solid #00d4aa33; }
+    .badge.base { background: #0052ff15; color: #4d8eff; border: 1px solid #0052ff33; }
+    .badge.usdc { background: #2775ca15; color: #5a9fd4; border: 1px solid #2775ca33; }
+
+    /* About section */
+    .about {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin: 32px 0;
+    }
+    @media (max-width: 700px) { .about { grid-template-columns: 1fr; } }
+    .about-card {
+      background: #0e0e15;
+      border: 1px solid #1a1a2e;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .about-card h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #00d4aa;
+      margin-bottom: 8px;
+    }
+    .about-card p {
+      font-size: 12px;
+      color: #777;
+      line-height: 1.6;
+    }
 
     /* Agent Network */
-    .network { display: flex; align-items: center; justify-content: center; gap: 0; margin: 20px 0; }
-    .acard { background: #111118; border: 1px solid #1a1a2e; border-radius: 8px; padding: 14px 18px; min-width: 180px; text-align: center; transition: border-color 0.3s, box-shadow 0.3s; }
-    .acard.glow { border-color: #00d4aa44; box-shadow: 0 0 16px #00d4aa15; }
-    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
-    .dot-o { background: #ff6b6b; } .dot-r { background: #4ecdc4; } .dot-w { background: #ffe66d; }
-    .acard .nm { font-size: 12px; font-weight: 600; color: #ddd; }
-    .acard .rl { font-size: 10px; color: #555; margin-top: 3px; }
-    .acard .bl { font-size: 12px; color: #00d4aa; margin-top: 6px; font-weight: 500; }
-    .acard .wa { font-size: 8px; color: #333; margin-top: 4px; word-break: break-all; }
-    .acard .wa a { color: #333; text-decoration: none; } .acard .wa a:hover { color: #00d4aa; }
-    .arr { font-size: 18px; color: #222; padding: 0 10px; text-align: center; transition: color 0.3s; }
-    .arr .lb { font-size: 8px; color: #333; display: block; }
-    .arr.on { color: #00d4aa; } .arr.on .lb { color: #00d4aa; }
+    .network-section { margin: 28px 0; }
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: #333;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 14px;
+    }
+    .network {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+    }
+    .acard {
+      background: #0e0e15;
+      border: 1px solid #1a1a2e;
+      border-radius: 12px;
+      padding: 18px 22px;
+      min-width: 190px;
+      text-align: center;
+      transition: all 0.4s ease;
+    }
+    .acard:hover { border-color: #1a1a3e; transform: translateY(-2px); }
+    .acard.glow { border-color: #00d4aa44; box-shadow: 0 4px 24px #00d4aa12; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+    .dot-o { background: #ff6b6b; box-shadow: 0 0 8px #ff6b6b44; }
+    .dot-r { background: #4ecdc4; box-shadow: 0 0 8px #4ecdc444; }
+    .dot-w { background: #ffe66d; box-shadow: 0 0 8px #ffe66d44; }
+    .acard .nm { font-size: 13px; font-weight: 600; color: #eee; }
+    .acard .rl { font-size: 11px; color: #555; margin-top: 4px; }
+    .acard .bl { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #00d4aa; margin-top: 10px; font-weight: 500; }
+    .acard .wa { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #2a2a3a; margin-top: 4px; }
+    .acard .wa a { color: #2a2a3a; text-decoration: none; transition: color 0.2s; }
+    .acard .wa a:hover { color: #00d4aa; }
+    .arr { padding: 0 14px; text-align: center; }
+    .arr-line {
+      width: 40px;
+      height: 2px;
+      background: linear-gradient(90deg, #1a1a2e, #00d4aa33, #1a1a2e);
+      margin: 0 auto;
+      position: relative;
+    }
+    .arr-line::after {
+      content: '';
+      position: absolute;
+      right: -4px;
+      top: -3px;
+      width: 0;
+      height: 0;
+      border-left: 6px solid #00d4aa33;
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+    }
+    .arr .lb { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #333; display: block; margin-top: 4px; }
+    .arr.on .arr-line { background: linear-gradient(90deg, #1a1a2e, #00d4aa, #1a1a2e); }
+    .arr.on .arr-line::after { border-left-color: #00d4aa; }
+    .arr.on .lb { color: #00d4aa; }
 
     /* Input */
-    .input-area { margin: 20px 0; }
-    .goal-row { display: flex; gap: 8px; }
-    .goal-row input { flex: 1; background: #111118; border: 1px solid #1a1a2e; border-radius: 6px; padding: 11px 14px; color: #ddd; font-family: inherit; font-size: 13px; outline: none; }
-    .goal-row input:focus { border-color: #00d4aa33; }
+    .input-section {
+      background: #0e0e15;
+      border: 1px solid #1a1a2e;
+      border-radius: 14px;
+      padding: 24px;
+      margin: 28px 0;
+    }
+    .input-section h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ddd;
+      margin-bottom: 14px;
+    }
+    .examples {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .example-chip {
+      font-size: 11px;
+      color: #888;
+      background: #111118;
+      border: 1px solid #1a1a2e;
+      border-radius: 20px;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .example-chip:hover { border-color: #00d4aa44; color: #00d4aa; background: #00d4aa08; }
+    .goal-row { display: flex; gap: 10px; }
+    .goal-row input {
+      flex: 1;
+      background: #111118;
+      border: 1px solid #1a1a2e;
+      border-radius: 10px;
+      padding: 13px 16px;
+      color: #eee;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .goal-row input:focus { border-color: #00d4aa44; }
     .goal-row input::placeholder { color: #333; }
-    .btn { background: #00d4aa; color: #0a0a0f; border: none; border-radius: 6px; padding: 11px 18px; font-family: inherit; font-weight: 600; cursor: pointer; font-size: 12px; }
-    .btn:hover { background: #00eebb; } .btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .opts { display: flex; gap: 14px; margin-top: 8px; align-items: center; font-size: 11px; color: #555; }
-    .opts input { width: 60px; background: #111118; border: 1px solid #1a1a2e; border-radius: 4px; padding: 4px 6px; color: #ddd; font-family: inherit; font-size: 11px; outline: none; }
+    .btn {
+      background: linear-gradient(135deg, #00d4aa, #00b894);
+      color: #0a0a0f;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 24px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      letter-spacing: 0.3px;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px #00d4aa33; }
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+    .opts {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      align-items: center;
+      font-size: 12px;
+      color: #555;
+    }
+    .opts input {
+      width: 64px;
+      background: #111118;
+      border: 1px solid #1a1a2e;
+      border-radius: 6px;
+      padding: 5px 8px;
+      color: #ddd;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      outline: none;
+    }
 
-    /* Status */
-    .stats { display: flex; gap: 20px; padding: 8px 14px; background: #111118; border: 1px solid #1a1a2e; border-radius: 6px; margin: 16px 0; font-size: 11px; }
-    .st { display: flex; gap: 5px; } .st-l { color: #444; } .st-v { color: #00d4aa; font-weight: 600; } .st-v.r { color: #ff6b6b; }
+    /* Status Bar */
+    .stats {
+      display: flex;
+      gap: 24px;
+      padding: 10px 18px;
+      background: #0e0e15;
+      border: 1px solid #1a1a2e;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+    .st { display: flex; gap: 6px; align-items: center; }
+    .st-l { color: #444; font-size: 11px; }
+    .st-v { font-family: 'JetBrains Mono', monospace; color: #00d4aa; font-weight: 600; font-size: 12px; }
+    .st-v.r { color: #ff6b6b; }
 
     /* Grid */
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
     .full { grid-column: 1 / -1; }
 
-    .panel { background: #111118; border: 1px solid #1a1a2e; border-radius: 8px; overflow: hidden; }
-    .ph { padding: 8px 14px; font-size: 10px; color: #00d4aa; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #1a1a2e; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-    .ph .count { background: #1a1a2e; color: #888; padding: 1px 6px; border-radius: 8px; font-size: 9px; }
-    .pb { padding: 10px 14px; max-height: 360px; overflow-y: auto; font-size: 11px; line-height: 1.7; }
-    .pb::-webkit-scrollbar { width: 3px; } .pb::-webkit-scrollbar-thumb { background: #1a1a2e; }
+    .panel {
+      background: #0e0e15;
+      border: 1px solid #1a1a2e;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .ph {
+      padding: 10px 16px;
+      font-size: 11px;
+      color: #00d4aa;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      border-bottom: 1px solid #1a1a2e;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ph .count {
+      background: #1a1a2e;
+      color: #666;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .pb {
+      padding: 12px 16px;
+      max-height: 380px;
+      overflow-y: auto;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    .pb::-webkit-scrollbar { width: 4px; }
+    .pb::-webkit-scrollbar-track { background: transparent; }
+    .pb::-webkit-scrollbar-thumb { background: #1a1a2e; border-radius: 2px; }
 
-    .empty { color: #222; font-style: italic; text-align: center; padding: 16px 0; }
+    .empty { color: #555; font-style: italic; text-align: center; padding: 20px 0; font-size: 12px; }
 
     /* Service cards */
-    .svc { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #0d0d14; border-radius: 5px; margin-bottom: 6px; }
-    .svc .svc-name { font-size: 12px; font-weight: 600; color: #ddd; }
-    .svc .svc-desc { font-size: 10px; color: #555; }
-    .svc .svc-price { margin-left: auto; color: #00d4aa; font-size: 12px; font-weight: 600; white-space: nowrap; }
-    .svc .svc-agent { font-size: 9px; color: #444; }
+    .svc {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: #0a0a12;
+      border: 1px solid #14141e;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      transition: border-color 0.2s;
+    }
+    .svc:hover { border-color: #1a1a3e; }
+    .svc .svc-name { font-size: 13px; font-weight: 600; color: #ddd; }
+    .svc .svc-desc { font-size: 11px; color: #555; margin-top: 2px; }
+    .svc .svc-price {
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+      color: #00d4aa;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .svc .svc-agent { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #333; margin-top: 3px; }
+    .svc .svc-caps {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .cap-tag {
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: #111120;
+      color: #555;
+      font-family: 'JetBrains Mono', monospace;
+    }
 
-    /* Approval cards */
-    .appr { padding: 10px 12px; background: #1a1208; border: 1px solid #332a10; border-radius: 6px; margin-bottom: 6px; }
+    /* Spending control cards */
+    .appr {
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #0e1118, #0c1015);
+      border: 1px solid #1a2030;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
     .appr .appr-header { display: flex; justify-content: space-between; align-items: center; }
-    .appr .appr-agent { font-size: 11px; color: #ffe66d; font-weight: 600; }
-    .appr .appr-amount { font-size: 13px; color: #ffe66d; font-weight: 700; }
-    .appr .appr-task { font-size: 10px; color: #888; margin-top: 4px; }
-    .appr-btn { background: #ffe66d; color: #0a0a0f; border: none; border-radius: 4px; padding: 4px 10px; font-family: inherit; font-size: 10px; font-weight: 600; cursor: pointer; margin-top: 6px; }
-    .appr-btn:hover { background: #fff59d; }
+    .appr .appr-agent { font-size: 12px; color: #a0b0c0; font-weight: 600; }
+    .appr .appr-amount { font-family: 'JetBrains Mono', monospace; font-size: 16px; color: #ffe66d; font-weight: 700; }
+    .appr .appr-task { font-size: 11px; color: #666; margin-top: 6px; }
 
     /* Escrow cards */
-    .esc { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #0d0d14; border-radius: 5px; margin-bottom: 4px; font-size: 10px; }
-    .esc-status { padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; }
+    .esc {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #0a0a12;
+      border: 1px solid #14141e;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+    .esc-status { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
     .esc-status.pending { background: #332a10; color: #ffe66d; }
     .esc-status.released { background: #0a2e1a; color: #00d4aa; }
     .esc-status.failed { background: #2e0a0a; color: #ff6b6b; }
 
     /* Timeline */
-    .tl-entry { display: flex; gap: 6px; padding: 3px 0; align-items: baseline; font-size: 11px; }
-    .tl-time { color: #2a2a2a; font-size: 9px; min-width: 65px; }
+    .tl-entry {
+      display: flex;
+      gap: 8px;
+      padding: 4px 0;
+      align-items: baseline;
+      font-size: 11px;
+      border-bottom: 1px solid #0a0a12;
+    }
+    .tl-entry:last-child { border-bottom: none; }
+    .tl-time { font-family: 'JetBrains Mono', monospace; color: #2a2a2a; font-size: 9px; min-width: 65px; }
     .tl-agent { font-weight: 600; min-width: 90px; font-size: 10px; }
     .tl-agent.o { color: #ff6b6b; } .tl-agent.r { color: #4ecdc4; } .tl-agent.w { color: #ffe66d; } .tl-agent.m { color: #00d4aa; } .tl-agent.l { color: #a78bfa; }
-    .tl-act { color: #666; }
-    .tl-det { color: #888; }
+    .tl-act { font-family: 'JetBrains Mono', monospace; color: #555; font-size: 10px; }
+    .tl-det { color: #777; font-size: 11px; }
     .tl-det.pay { color: #00d4aa; font-weight: 600; }
     .tl-det.err { color: #ff6b6b; }
     .tl-det.api { color: #a78bfa; }
     .tl-det.esc { color: #4ecdc4; }
-    .tl-icon { font-size: 10px; min-width: 14px; }
+    .tl-icon { font-family: 'JetBrains Mono', monospace; font-size: 10px; min-width: 14px; color: #333; }
+
+    /* Transaction cards */
+    .txn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #0a0a12;
+      border: 1px solid #14141e;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 11px;
+      transition: border-color 0.2s;
+    }
+    .txn:hover { border-color: #1a1a3e; }
+    .txn-agent {
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      min-width: 55px;
+      text-align: center;
+    }
+    .txn-agent.o { background: #ff6b6b18; color: #ff6b6b; }
+    .txn-agent.r { background: #4ecdc418; color: #4ecdc4; }
+    .txn-agent.w { background: #ffe66d18; color: #ffe66d; }
+    .txn-memo { color: #666; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .txn-amount { font-family: 'JetBrains Mono', monospace; color: #00d4aa; font-weight: 600; white-space: nowrap; }
+    .txn-status { font-size: 9px; font-family: 'JetBrains Mono', monospace; padding: 2px 6px; border-radius: 4px; }
+    .txn-status.confirmed { background: #0a2e1a; color: #00d4aa; }
+    .txn-status.queued { background: #332a10; color: #ffe66d; }
+    .txn-status.failed { background: #2e0a0a; color: #ff6b6b; }
+    .txn-hash { font-family: 'JetBrains Mono', monospace; font-size: 9px; }
+    .txn-hash a { color: #333; text-decoration: none; transition: color 0.2s; }
+    .txn-hash a:hover { color: #00d4aa; }
 
     /* Report */
-    .report { white-space: pre-wrap; font-size: 11px; line-height: 1.6; color: #bbb; }
+    .report { white-space: pre-wrap; font-size: 12px; line-height: 1.7; color: #bbb; }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 40px 0 20px;
+      font-size: 11px;
+      color: #2a2a35;
+    }
+    .footer a { color: #333; text-decoration: none; }
+    .footer a:hover { color: #00d4aa; }
 
     @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
     .pulsing { animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .tl-entry { animation: slideIn 0.3s ease; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <h1>agent_mesh</h1>
-      <span class="badge">LOCUS</span>
-      <span class="badge base">BASE</span>
-      <span class="sub">autonomous agent marketplace</span>
-    </header>
 
-    <div class="network">
-      <div class="acard" id="c-o">
-        <div><span class="dot dot-o"></span><span class="nm">Orchestrator</span></div>
-        <div class="rl">coordinates + pays</div>
-        <div class="bl" id="b-o">—</div>
-        <div class="wa"><a id="l-o" href="#" target="_blank"></a></div>
-      </div>
-      <div class="arr" id="a1"><span>→</span><span class="lb">USDC</span></div>
-      <div class="acard" id="c-r">
-        <div><span class="dot dot-r"></span><span class="nm">Researcher</span></div>
-        <div class="rl">search + scrape</div>
-        <div class="bl" id="b-r">—</div>
-        <div class="wa"><a id="l-r" href="#" target="_blank"></a></div>
-      </div>
-      <div class="arr" id="a2"><span>→</span><span class="lb">USDC</span></div>
-      <div class="acard" id="c-w">
-        <div><span class="dot dot-w"></span><span class="nm">Writer</span></div>
-        <div class="rl">synthesize</div>
-        <div class="bl" id="b-w">—</div>
-        <div class="wa"><a id="l-w" href="#" target="_blank"></a></div>
+    <!-- Hero -->
+    <div class="hero">
+      <h1>Agent <span>Mesh</span></h1>
+      <p class="tagline">Autonomous AI agents that discover, hire, and pay each other in USDC on Base.</p>
+      <div class="badges">
+        <span class="badge locus">Powered by Locus</span>
+        <span class="badge base">Base Chain</span>
+        <span class="badge usdc">USDC Payments</span>
       </div>
     </div>
 
-    <div class="input-area">
+    <!-- About -->
+    <div class="about">
+      <div class="about-card">
+        <h3>How it works</h3>
+        <p>You give a goal to the orchestrator. It discovers the right agents from the marketplace, escrows USDC via Locus, dispatches work, and releases payment when tasks are delivered. Every dollar is tracked on-chain.</p>
+      </div>
+      <div class="about-card">
+        <h3>Why it matters</h3>
+        <p>AI agents can think and act, but can't safely pay each other. Agent Mesh gives every agent its own Locus wallet with spending controls, turning autonomous coordination into an economic reality.</p>
+      </div>
+      <div class="about-card">
+        <h3>What's under the hood</h3>
+        <p>Service registry for agent discovery. Locus checkout sessions for escrow. Spending controls with human approval gates. Wrapped pay-per-use APIs (Exa, Grok, Gemini). Full audit trail of every payment.</p>
+      </div>
+    </div>
+
+    <!-- Agent Network -->
+    <div class="network-section">
+      <div class="section-label">Agent Network</div>
+      <div class="network">
+        <div class="acard" id="c-o">
+          <div><span class="dot dot-o"></span><span class="nm">Orchestrator</span></div>
+          <div class="rl">Discovers agents, manages budget, pays on delivery</div>
+          <div class="bl" id="b-o">--</div>
+          <div class="wa"><a id="l-o" href="#" target="_blank"></a></div>
+        </div>
+        <div class="arr" id="a1">
+          <div class="arr-line"></div>
+          <span class="lb">USDC</span>
+        </div>
+        <div class="acard" id="c-r">
+          <div><span class="dot dot-r"></span><span class="nm">Researcher</span></div>
+          <div class="rl">Web search and scraping via Locus APIs</div>
+          <div class="bl" id="b-r">--</div>
+          <div class="wa"><a id="l-r" href="#" target="_blank"></a></div>
+        </div>
+        <div class="arr" id="a2">
+          <div class="arr-line"></div>
+          <span class="lb">USDC</span>
+        </div>
+        <div class="acard" id="c-w">
+          <div><span class="dot dot-w"></span><span class="nm">Writer</span></div>
+          <div class="rl">Report synthesis via Locus LLM APIs</div>
+          <div class="bl" id="b-w">--</div>
+          <div class="wa"><a id="l-w" href="#" target="_blank"></a></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Goal Input -->
+    <div class="input-section">
+      <h2>Give the mesh a goal</h2>
+      <div class="examples">
+        <div class="example-chip" onclick="setGoal(this)">What are the top DeFi protocols on Base?</div>
+        <div class="example-chip" onclick="setGoal(this)">Compare Locus vs traditional payment APIs for AI agents</div>
+        <div class="example-chip" onclick="setGoal(this)">What is ERC-8004 and how does it work?</div>
+        <div class="example-chip" onclick="setGoal(this)">Summarize the latest AI agent infrastructure trends</div>
+      </div>
       <div class="goal-row">
-        <input type="text" id="goalIn" placeholder="Give the agent mesh a goal..." />
-        <button class="btn" id="runBtn" onclick="run()">Run</button>
+        <input type="text" id="goalIn" placeholder="e.g. Research the best agent payment solutions on Ethereum..." />
+        <button class="btn" id="runBtn" onclick="run()">Run Mesh</button>
       </div>
       <div class="opts">
-        <span>Budget <input type="number" id="budIn" value="1.5" min="0.1" step="0.25" /> USDC</span>
-        <span>Max/task <input type="number" id="taskIn" value="0.5" min="0.05" step="0.1" /> USDC</span>
+        <span>Budget <input type="number" id="budIn" value="1.0" min="0.1" step="0.25" /> USDC</span>
+        <span>Max per task <input type="number" id="taskIn" value="0.25" min="0.05" step="0.05" /> USDC</span>
       </div>
     </div>
 
+    <!-- Status -->
     <div class="stats">
-      <div class="st"><span class="st-l">status</span><span class="st-v" id="s-st">idle</span></div>
-      <div class="st"><span class="st-l">budget</span><span class="st-v" id="s-bud">—</span></div>
-      <div class="st"><span class="st-l">spent</span><span class="st-v r" id="s-sp">$0.00</span></div>
-      <div class="st"><span class="st-l">tasks</span><span class="st-v" id="s-tk">0</span></div>
-      <div class="st"><span class="st-l">escrows</span><span class="st-v" id="s-es">0</span></div>
+      <div class="st"><span class="st-l">Status</span><span class="st-v" id="s-st">idle</span></div>
+      <div class="st"><span class="st-l">Budget</span><span class="st-v" id="s-bud">--</span></div>
+      <div class="st"><span class="st-l">Spent</span><span class="st-v r" id="s-sp">$0.00</span></div>
+      <div class="st"><span class="st-l">Tasks</span><span class="st-v" id="s-tk">0</span></div>
+      <div class="st"><span class="st-l">Escrows</span><span class="st-v" id="s-es">0</span></div>
     </div>
 
+    <!-- Panels -->
     <div class="grid">
-      <!-- Marketplace -->
       <div class="panel">
         <div class="ph">Marketplace <span class="count" id="svc-count">0</span></div>
         <div class="pb" id="svcList"><div class="empty">loading services...</div></div>
       </div>
 
-      <!-- Approvals -->
       <div class="panel">
-        <div class="ph">Approvals <span class="count" id="apr-count">0</span></div>
-        <div class="pb" id="aprList"><div class="empty">no approvals pending</div></div>
+        <div class="ph">Spending Controls <span class="count" id="apr-count">0</span></div>
+        <div class="pb" id="aprList"><div class="empty">no payments flagged</div></div>
       </div>
 
-      <!-- Live Timeline -->
       <div class="panel full">
         <div class="ph">Live Timeline <span class="count" id="tl-count">0</span></div>
-        <div class="pb" id="timeline"><div class="empty">waiting for activity...</div></div>
+        <div class="pb" id="timeline"><div class="empty">run a goal to see real-time agent activity and payments</div></div>
       </div>
 
-      <!-- Escrows -->
       <div class="panel">
         <div class="ph">Escrow Sessions <span class="count" id="esc-count">0</span></div>
         <div class="pb" id="escList"><div class="empty">no escrows yet</div></div>
       </div>
 
-      <!-- Report -->
-      <div class="panel">
-        <div class="ph">Report Output</div>
-        <div class="pb"><div class="report" id="reportOut"><div class="empty">submit a goal to see results</div></div></div>
+      <div class="panel full">
+        <div class="ph">On-Chain Transactions <span class="count" id="txn-count">0</span></div>
+        <div class="pb" id="txnList"><div class="empty">loading transactions...</div></div>
       </div>
+
+      <div class="panel full">
+        <div class="ph">Report Output</div>
+        <div class="pb"><div class="report" id="reportOut"><div class="empty">submit a goal to see the synthesized report</div></div></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Agent Mesh &middot; Built for <a href="https://synthesis.md" target="_blank">The Synthesis</a> &middot; Powered by <a href="https://paywithlocus.com" target="_blank">Locus</a> on <a href="https://base.org" target="_blank">Base</a>
     </div>
   </div>
 
@@ -189,14 +571,24 @@
     const $ = id => document.getElementById(id);
     let eventCount = 0;
 
+    function setGoal(el) {
+      $('goalIn').value = el.textContent;
+      $('goalIn').focus();
+    }
+
     // SSE connection
     const sse = new EventSource('/api/events/stream');
+    // Internal events to hide from timeline (fallback noise)
+    const HIDDEN_ACTIONS = new Set([
+      'escrow_failed', 'escrow_fallback', 'escrow_creating',
+      'synthesis_provider_failed', 'payment_pending_approval', 'approval_required',
+    ]);
+
     sse.onmessage = (e) => {
       try {
         const ev = JSON.parse(e.data);
         if (ev.action === 'connected') return;
-        addTimelineEntry(ev);
-        // Refresh panels on key events
+        if (!HIDDEN_ACTIONS.has(ev.action)) addTimelineEntry(ev);
         if (ev.type === 'escrow') loadEscrows();
         if (ev.type === 'approval') loadApprovals();
         if (ev.action?.includes('payment')) loadBalances();
@@ -248,10 +640,10 @@
       let detail = '';
       if (ev.amount) detail = `${ev.amount} USDC`;
       else if (ev.provider) detail = `${ev.provider}/${ev.endpoint}`;
-      else if (ev.query) detail = ev.query?.slice(0, 40);
-      else if (ev.task) detail = ev.task?.slice(0, 40);
+      else if (ev.query) detail = ev.query?.slice(0, 50);
+      else if (ev.task) detail = ev.task?.slice(0, 50);
       else if (ev.serviceName) detail = `${ev.serviceName} @ $${ev.price}`;
-      else if (ev.error) detail = ev.error?.slice(0, 60);
+      else if (ev.error) detail = ev.error?.slice(0, 80);
       else if (ev.sessionId) detail = `session:${ev.sessionId?.slice(0, 8)}`;
 
       row.innerHTML = `<span class="tl-icon">${icon}</span><span class="tl-time">${time}</span><span class="tl-agent ${cls}">${ev.agent || 'mesh'}</span><span class="tl-act">${ev.action}</span><span class="tl-det ${dcls}">${detail}</span>`;
@@ -263,14 +655,14 @@
       try {
         const r = await fetch('/api/balances');
         const d = await r.json();
-        const map = { orchestrator: ['o'], researcher: ['r'], writer: ['w'] };
+        const map = { orchestrator: 'o', researcher: 'r', writer: 'w' };
         for (const [key, info] of Object.entries(d.balances)) {
           const bal = info?.usdc_balance ?? '?';
           const addr = info?.wallet_address ?? '';
-          const ids = map[key];
-          if (ids) {
-            $(`b-${ids[0]}`).textContent = `${parseFloat(bal).toFixed(2)} USDC`;
-            const link = $(`l-${ids[0]}`);
+          const id = map[key];
+          if (id) {
+            $(`b-${id}`).textContent = `${parseFloat(bal).toFixed(2)} USDC`;
+            const link = $(`l-${id}`);
             link.textContent = addr ? addr.slice(0, 6) + '...' + addr.slice(-4) : '';
             link.href = `https://basescan.org/address/${addr}`;
           }
@@ -284,13 +676,14 @@
         const d = await r.json();
         const el = $('svcList');
         $('svc-count').textContent = d.services.length;
-        if (d.services.length === 0) { el.innerHTML = '<div class="empty">no services</div>'; return; }
+        if (d.services.length === 0) { el.innerHTML = '<div class="empty">no services registered</div>'; return; }
         el.innerHTML = d.services.map(s => `
           <div class="svc">
             <div>
               <div class="svc-name">${s.serviceName}</div>
-              <div class="svc-desc">${s.description.slice(0, 80)}</div>
-              <div class="svc-agent">${s.agentName} | ${s.capabilities.join(', ')}</div>
+              <div class="svc-desc">${s.description.slice(0, 90)}</div>
+              <div class="svc-caps">${s.capabilities.map(c => `<span class="cap-tag">${c}</span>`).join('')}</div>
+              <div class="svc-agent">${s.agentName}</div>
             </div>
             <div class="svc-price">$${s.price.toFixed(2)}</div>
           </div>
@@ -304,15 +697,16 @@
         const d = await r.json();
         const el = $('aprList');
         $('apr-count').textContent = d.approvals.length;
-        if (d.approvals.length === 0) { el.innerHTML = '<div class="empty">no approvals pending</div>'; return; }
-        el.innerHTML = d.approvals.map(a => `
+        if (d.approvals.length === 0) { el.innerHTML = '<div class="empty">no payments flagged</div>'; return; }
+        el.innerHTML = `<div style="font-size:11px;color:#666;padding:0 2px 10px;line-height:1.5;">Locus spending controls held these payments for human review. Work completed, but USDC doesn't move until approved — no agent can drain your wallet.</div>` +
+        d.approvals.map(a => `
           <div class="appr">
             <div class="appr-header">
               <span class="appr-agent">${a.agent}</span>
               <span class="appr-amount">$${a.amount}</span>
             </div>
             <div class="appr-task">${a.task}</div>
-            ${a.approvalUrl ? `<button class="appr-btn" onclick="window.open('${a.approvalUrl}','_blank')">Approve</button>` : ''}
+            <div style="font-size:10px;color:#ffe66d88;margin-top:6px;">Held by Locus</div>
           </div>
         `).join('');
       } catch {}
@@ -330,8 +724,48 @@
           const stCls = e.status.includes('release') ? 'released' : e.status.includes('fail') ? 'failed' : 'pending';
           return `<div class="esc">
             <span class="esc-status ${stCls}">${e.status}</span>
-            <span>${e.buyerAgent} → ${e.sellerAgent}</span>
-            <span style="margin-left:auto;color:#00d4aa">$${e.amount}</span>
+            <span>${e.buyerAgent} &rarr; ${e.sellerAgent}</span>
+            <span style="margin-left:auto;color:#00d4aa;font-family:'JetBrains Mono',monospace">$${e.amount}</span>
+          </div>`;
+        }).join('');
+      } catch {}
+    }
+
+    const WALLET_NAMES = {
+      '0x148624ec93458da3069e1d4c12d18971cf483ce0': 'Orchestrator',
+      '0xb16ea58f59e9fba450864fa0f9004970dcc019a9': 'Researcher',
+      '0x00ab3647c57ca26c4391171c483ba79069650aa8': 'Writer',
+    };
+
+    function walletLabel(addr) {
+      if (!addr) return '?';
+      const name = WALLET_NAMES[addr.toLowerCase()];
+      return name || addr.slice(0, 6) + '...' + addr.slice(-4);
+    }
+
+    async function loadTransactions() {
+      try {
+        const r = await fetch('/api/transactions');
+        const d = await r.json();
+        const el = $('txnList');
+        const txns = d.transactions || [];
+        $('txn-count').textContent = txns.length;
+        if (txns.length === 0) { el.innerHTML = '<div class="empty">no transactions yet</div>'; return; }
+        el.innerHTML = txns.map(tx => {
+          const agentCls = tx._agent === 'orchestrator' ? 'o' : tx._agent === 'researcher' ? 'r' : 'w';
+          const statusCls = (tx.status || '').toLowerCase().includes('confirm') ? 'confirmed' : (tx.status || '').toLowerCase().includes('queue') ? 'queued' : 'failed';
+          const to = walletLabel(tx.to_address);
+          const memo = tx.memo || 'Transfer';
+          const hash = tx.tx_hash ? tx.tx_hash.slice(0, 10) + '...' : '';
+          const time = new Date(tx.created_at).toLocaleTimeString('en-US', { hour12: false });
+          return `<div class="txn">
+            <span class="txn-agent ${agentCls}">${tx._agent}</span>
+            <span style="color:#444;font-size:10px">${time}</span>
+            <span style="color:#555;font-size:10px">&rarr; ${to}</span>
+            <span class="txn-memo">${memo}</span>
+            <span class="txn-amount">$${parseFloat(tx.amount_usdc || 0).toFixed(2)}</span>
+            <span class="txn-status ${statusCls}">${tx.status}</span>
+            ${tx.tx_hash ? `<span class="txn-hash"><a href="https://basescan.org/tx/${tx.tx_hash}" target="_blank">${hash}</a></span>` : ''}
           </div>`;
         }).join('');
       } catch {}
@@ -340,15 +774,19 @@
     async function run() {
       const goal = $('goalIn').value.trim();
       if (!goal) return;
-      const budget = parseFloat($('budIn').value) || 1.5;
-      const maxPerTask = parseFloat($('taskIn').value) || 0.5;
+      const budget = parseFloat($('budIn').value) || 1.0;
+      const maxPerTask = parseFloat($('taskIn').value) || 0.25;
 
       $('runBtn').disabled = true;
-      $('runBtn').textContent = '...';
+      $('runBtn').textContent = 'Running...';
       $('s-st').textContent = 'running';
       $('s-bud').textContent = `$${budget.toFixed(2)}`;
       $('s-sp').textContent = '$0.00';
-      $('reportOut').innerHTML = '<div class="empty pulsing">agents working...</div>';
+      $('reportOut').innerHTML = '<div class="empty pulsing">agents are researching and synthesizing...</div>';
+
+      // Animate
+      document.querySelectorAll('.acard').forEach(c => c.classList.add('glow'));
+      document.querySelectorAll('.arr').forEach(a => a.classList.add('on'));
 
       try {
         const r = await fetch('/api/goal', {
@@ -380,21 +818,25 @@
         $('s-st').textContent = 'error';
       }
 
+      document.querySelectorAll('.acard').forEach(c => c.classList.remove('glow'));
+      document.querySelectorAll('.arr').forEach(a => a.classList.remove('on'));
       $('runBtn').disabled = false;
-      $('runBtn').textContent = 'Run';
+      $('runBtn').textContent = 'Run Mesh';
       loadBalances();
       loadEscrows();
       loadApprovals();
+      setTimeout(loadTransactions, 3000); // slight delay for tx confirmation
     }
 
     $('goalIn').addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
 
-    // Initial load
     loadBalances();
     loadServices();
     loadApprovals();
     loadEscrows();
+    loadTransactions();
     setInterval(loadBalances, 30000);
+    setInterval(loadTransactions, 60000);
   </script>
 </body>
 </html>

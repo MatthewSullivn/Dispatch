@@ -86,14 +86,14 @@ function initAgents() {
   researcher.registerService(registry, {
     name: 'Web Research',
     description: 'Search the web, scrape websites, and gather data using Exa, Firecrawl, and Grok via Locus wrapped APIs',
-    price: 0.25,
+    price: 0.05,
     capabilities: ['research', 'search', 'scrape', 'data-gathering'],
   });
 
   writer.registerService(registry, {
     name: 'Report Synthesis',
     description: 'Synthesize research findings into professional reports using Gemini or Grok LLMs via Locus wrapped APIs',
-    price: 0.25,
+    price: 0.05,
     capabilities: ['writing', 'synthesis', 'report', 'summarization'],
   });
 
@@ -120,13 +120,40 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Rate limiting for goal submissions
+let lastGoalTime = 0;
+let goalCount = 0;
+const GOAL_COOLDOWN_MS = 30000; // 30 seconds between goals
+const MAX_GOALS_PER_HOUR = 10;
+const goalHourWindow = [];
+
 // Submit a goal
 app.post('/api/goal', async (req, res) => {
   const { goal, budget, maxPerTask } = req.body;
   if (!goal) return res.status(400).json({ error: 'goal is required' });
 
+  // Rate limit: 30s cooldown
+  const now = Date.now();
+  if (now - lastGoalTime < GOAL_COOLDOWN_MS) {
+    const wait = Math.ceil((GOAL_COOLDOWN_MS - (now - lastGoalTime)) / 1000);
+    return res.status(429).json({ error: `Rate limited. Try again in ${wait}s.` });
+  }
+
+  // Rate limit: max per hour
+  const oneHourAgo = now - 3600000;
+  while (goalHourWindow.length && goalHourWindow[0] < oneHourAgo) goalHourWindow.shift();
+  if (goalHourWindow.length >= MAX_GOALS_PER_HOUR) {
+    return res.status(429).json({ error: 'Rate limited. Max 10 goals per hour.' });
+  }
+
+  lastGoalTime = now;
+  goalHourWindow.push(now);
+
+  // Cap budget to prevent abuse
+  const safeBudget = Math.min(budget || orchestrator.budget.total, 1.0);
+  const safePerTask = Math.min(maxPerTask || orchestrator.budget.perTask, 0.25);
   if (budget || maxPerTask) {
-    orchestrator.setBudget(budget || orchestrator.budget.total, maxPerTask || orchestrator.budget.perTask);
+    orchestrator.setBudget(safeBudget, safePerTask);
   }
 
   try {
@@ -235,11 +262,25 @@ app.get('/api/agents', (req, res) => {
   });
 });
 
-// Transactions
+// Transactions from all agents
 app.get('/api/transactions', async (req, res) => {
   try {
-    const txns = await orchestrator.locus.getTransactions();
-    res.json(txns);
+    const agents = [
+      { name: 'orchestrator', agent: orchestrator },
+      { name: 'researcher', agent: researcher },
+      { name: 'writer', agent: writer },
+    ];
+    const all = [];
+    await Promise.all(agents.map(async ({ name, agent }) => {
+      try {
+        const result = await agent.locus.getTransactions();
+        const txns = result.data?.data?.transactions || result.data?.transactions || [];
+        txns.forEach(tx => { tx._agent = name; all.push(tx); });
+      } catch {}
+    }));
+    // Sort by date descending
+    all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    res.json({ transactions: all });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

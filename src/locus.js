@@ -40,8 +40,8 @@ class LocusClient {
     });
   }
 
-  async sendEmailEscrow(email, amount, description, disburseBefore = null) {
-    const body = { email, amount: String(amount), description };
+  async sendEmailEscrow(email, amount, memo, disburseBefore = null) {
+    const body = { email, amount: Number(amount), memo };
     if (disburseBefore) body.disburseBefore = disburseBefore;
     return this._request(`${this.baseUrl}/pay/send-email`, 'POST', body);
   }
@@ -51,12 +51,16 @@ class LocusClient {
   }
 
   async createCheckoutSession(amount, description, webhookUrl, metadata = {}) {
-    return this._request(`${this.baseUrl}/checkout/sessions`, 'POST', {
+    const body = {
       amount: String(amount),
       description,
-      webhookUrl,
       metadata,
-    });
+    };
+    // Only include webhookUrl if it's a valid HTTPS URL (localhost causes 500)
+    if (webhookUrl && webhookUrl.startsWith('https')) {
+      body.webhookUrl = webhookUrl;
+    }
+    return this._request(`${this.baseUrl}/checkout/sessions`, 'POST', body);
   }
 
   async checkoutPreflight(sessionId) {

@@ -49,20 +49,31 @@ class BaseAgent {
 
     if (result.status === 'pending_approval') {
       const approvalUrl = result.data?.approval_url || result.data?.data?.approval_url;
-      this.log('payment_pending_approval', {
-        type: 'approval',
-        approvalUrl,
-        amount,
-        task: taskDescription,
-      });
-
-      if (this.onApprovalNeeded) {
-        this.onApprovalNeeded({
-          agent: this.name,
+      // Locus beta returns 202 but auto-approves under threshold
+      // If no approval URL, treat as auto-approved
+      if (approvalUrl) {
+        this.log('payment_pending_approval', {
+          type: 'approval',
+          approvalUrl,
           amount,
           task: taskDescription,
-          approvalUrl,
-          timestamp: new Date().toISOString(),
+        });
+
+        if (this.onApprovalNeeded) {
+          this.onApprovalNeeded({
+            agent: this.name,
+            amount,
+            task: taskDescription,
+            approvalUrl,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } else {
+        this.log('payment_sent', {
+          type: 'payment',
+          amount,
+          to: recipientAddress,
+          result: result.data?.data || result.data,
         });
       }
     } else {

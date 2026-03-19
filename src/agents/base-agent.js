@@ -10,6 +10,7 @@ class BaseAgent {
     this.locus = new LocusClient(locusApiKey);
     this.locusApiKey = locusApiKey;
     this.walletAddress = walletAddress;
+    this.agentEmail = null; // Set for email escrow support
     this.onApprovalNeeded = onApprovalNeeded || null;
     this.taskLog = [];
   }
@@ -84,6 +85,31 @@ class BaseAgent {
         result: result.data?.data || result.data,
       });
     }
+
+    return result;
+  }
+
+  async payAgentViaEmail(email, amount, taskDescription) {
+    this.log('email_escrow_initiated', {
+      type: 'payment',
+      to: email,
+      amount,
+      task: taskDescription,
+      reasoning: `Using email escrow as alternative payment rail. Recipient can claim USDC via email link.`,
+    });
+
+    const result = await this.locus.sendEmailEscrow(
+      email,
+      amount,
+      `Agent Mesh payment: ${taskDescription}`
+    );
+
+    this.log('email_escrow_sent', {
+      type: 'payment',
+      amount,
+      to: email,
+      result: result.data?.data || result.data,
+    });
 
     return result;
   }

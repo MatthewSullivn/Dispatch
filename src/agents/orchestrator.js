@@ -129,7 +129,7 @@ class OrchestratorAgent extends BaseAgent {
         continue;
       }
 
-      // Step C: Release payment — escrow release or direct payment
+      // Step C: Release payment — escrow release, direct payment, or email escrow fallback
       try {
         if (escrowSession?.sessionId) {
           await this.escrowManager.releasePayment(this.locus, escrowSession.sessionId);
@@ -139,9 +139,22 @@ class OrchestratorAgent extends BaseAgent {
         this.budget.spent += task.payment;
         task.status = 'completed';
       } catch (err) {
-        this.log('payment_failed', { error: err.message, task: task.description });
-        task.status = 'work_done_unpaid';
-        task.error = err.message;
+        // Fallback: try email escrow if agent has an email
+        if (agent.agentEmail) {
+          try {
+            await this.payAgentViaEmail(agent.agentEmail, task.payment, task.description);
+            this.budget.spent += task.payment;
+            task.status = 'completed_via_email';
+          } catch (emailErr) {
+            this.log('payment_failed', { error: emailErr.message, task: task.description, reasoning: 'All payment methods exhausted: checkout escrow, direct wallet, and email escrow all failed.' });
+            task.status = 'work_done_unpaid';
+            task.error = emailErr.message;
+          }
+        } else {
+          this.log('payment_failed', { error: err.message, task: task.description });
+          task.status = 'work_done_unpaid';
+          task.error = err.message;
+        }
       }
 
       this.tasks.push(task);

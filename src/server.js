@@ -78,6 +78,10 @@ function initAgents() {
     escrowManager,
   });
 
+  // Set agent emails for email escrow fallback
+  researcher.agentEmail = process.env.RESEARCHER_EMAIL || null;
+  writer.agentEmail = process.env.WRITER_EMAIL || null;
+
   orchestrator.registerWorker(researcher);
   orchestrator.registerWorker(writer);
   orchestrator.setBudget(5.0, 1.0);

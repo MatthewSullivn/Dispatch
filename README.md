@@ -55,7 +55,9 @@ Agent Mesh uses Locus as its core payment layer. Remove Locus and the entire pro
 
 **Pay-Per-Use Wrapped APIs**: Agents call external services (Exa, Firecrawl, Gemini, Grok) through Locus's wrapped API proxy. Each call is automatically billed in USDC to the calling agent's wallet -- no upstream API keys needed.
 
-**On-Chain Auditability**: Every payment between agents is a real USDC transfer on Base, verifiable on BaseScan. The dashboard displays transaction hashes with direct links.
+**Email Escrow Fallback**: If checkout escrow and direct wallet payment both fail, agents fall back to Locus email escrow. The recipient claims USDC via an email link -- a novel payment rail for agent-to-agent settlement.
+
+**On-Chain Auditability**: Every payment between agents is a real USDC transfer on Base, verifiable on BaseScan. The dashboard displays transaction hashes with direct links. A dedicated reasoning log shows why each payment was made, not just the transaction data.
 
 ## Architecture
 
@@ -170,6 +172,7 @@ Open http://localhost:3000 in your browser.
 | `/api/timeline` | GET | Full event timeline |
 | `/api/events/stream` | GET | Server-Sent Events stream (real-time) |
 | `/api/audit` | GET | Complete audit trail for all agents |
+| `/api/reasoning` | GET | Agent decision-making log with reasoning |
 | `/api/agents` | GET | Agent names, roles, and wallet addresses |
 
 ## Dashboard

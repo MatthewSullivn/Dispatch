@@ -760,6 +760,153 @@
     .footer a { color: #3a4058; text-decoration: none; transition: color 0.2s; }
     .footer a:hover { color: #00d4aa; }
 
+    /* ── Progress Stepper ── */
+    .stepper {
+      display: none;
+      margin: 24px 0;
+      background: rgba(12,14,22,0.5);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 16px;
+      padding: 24px 28px;
+    }
+    .stepper.active { display: block; }
+    .stepper .stepper-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 700;
+      background: linear-gradient(135deg, rgba(0,212,170,0.8), rgba(0,196,212,0.8));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 18px;
+    }
+    .step-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+    }
+    .step-row:last-child { border-bottom: none; }
+    .step-indicator {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+      transition: all 0.4s ease;
+    }
+    .step-indicator.waiting {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #2e3348;
+    }
+    .step-indicator.active {
+      background: rgba(0,212,170,0.12);
+      border: 1px solid rgba(0,212,170,0.3);
+      color: #00d4aa;
+      box-shadow: 0 0 16px rgba(0,212,170,0.15);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .step-indicator.done {
+      background: rgba(0,212,170,0.12);
+      border: 1px solid rgba(0,212,170,0.2);
+      color: #00d4aa;
+    }
+    .step-indicator.error {
+      background: rgba(255,107,107,0.12);
+      border: 1px solid rgba(255,107,107,0.2);
+      color: #ff6b6b;
+    }
+    .step-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #3a4058;
+      transition: color 0.3s;
+    }
+    .step-row.active .step-label { color: #d0d4de; }
+    .step-row.done .step-label { color: #6a7090; }
+    .step-detail {
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: #2e3348;
+      transition: color 0.3s;
+    }
+    .step-row.active .step-detail { color: #00d4aa; }
+    .step-row.done .step-detail { color: #3a4058; }
+
+    /* ── Vision ── */
+    .vision-section {
+      margin: 36px 0;
+      text-align: center;
+      padding: 40px 28px;
+      background: rgba(12,14,22,0.3);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.03);
+      border-radius: 20px;
+      position: relative;
+    }
+    .vision-section::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: 30%; right: 30%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,212,170,0.12), transparent);
+    }
+    .vision-section h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #d0d4de;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+    .vision-section h2 span {
+      background: linear-gradient(135deg, #00d4aa, #00c4d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .vision-section p {
+      font-size: 13px;
+      color: #5a6278;
+      line-height: 1.8;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .vision-stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-top: 24px;
+    }
+    .vision-stat .vs-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #00d4aa, #00e8c0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .vision-stat .vs-label {
+      font-size: 10px;
+      color: #3a4058;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
     /* ── Animations ── */
     @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
     .pulsing { animation: pulse 2s ease-in-out infinite; }
@@ -854,6 +1001,12 @@
         </div>
         <div class="locus-feat">
           <div class="feat-check">[x]</div>
+          <div class="feat-name">Email Escrow Fallback</div>
+          <div class="feat-desc">If direct payment and checkout escrow both fail, agents fall back to Locus email escrow. Recipients claim USDC via email link.</div>
+          <span class="feat-tag bonus">bonus</span>
+        </div>
+        <div class="locus-feat">
+          <div class="feat-check">[x]</div>
           <div class="feat-name">Self-Registering Wallets</div>
           <div class="feat-desc">Agents self-register via Locus API. No manual account creation. Setup script handles wallet deployment and API key generation.</div>
           <span class="feat-tag safety">required</span>
@@ -922,6 +1075,51 @@
       <div class="st"><span class="st-l">Escrows</span><span class="st-v" id="s-es">0</span></div>
     </div>
 
+    <!-- Progress Stepper -->
+    <div class="stepper" id="stepper">
+      <div class="stepper-title">Payment Flow</div>
+      <div class="step-row" id="step-1">
+        <div class="step-indicator waiting">1</div>
+        <span class="step-label">Verify orchestrator wallet balance</span>
+        <span class="step-detail">Locus API</span>
+      </div>
+      <div class="step-row" id="step-2">
+        <div class="step-indicator waiting">2</div>
+        <span class="step-label">Discover agents from service registry</span>
+        <span class="step-detail">marketplace</span>
+      </div>
+      <div class="step-row" id="step-3">
+        <div class="step-indicator waiting">3</div>
+        <span class="step-label">Create escrow via Locus checkout session</span>
+        <span class="step-detail">lock funds</span>
+      </div>
+      <div class="step-row" id="step-4">
+        <div class="step-indicator waiting">4</div>
+        <span class="step-label">Worker preflight -- verify escrow is valid</span>
+        <span class="step-detail">preflight</span>
+      </div>
+      <div class="step-row" id="step-5">
+        <div class="step-indicator waiting">5</div>
+        <span class="step-label">Researcher searches via Exa + Firecrawl</span>
+        <span class="step-detail">wrapped APIs</span>
+      </div>
+      <div class="step-row" id="step-6">
+        <div class="step-indicator waiting">6</div>
+        <span class="step-label">Release escrow -- USDC payment on Base</span>
+        <span class="step-detail">on-chain</span>
+      </div>
+      <div class="step-row" id="step-7">
+        <div class="step-indicator waiting">7</div>
+        <span class="step-label">Writer synthesizes report via Gemini</span>
+        <span class="step-detail">wrapped APIs</span>
+      </div>
+      <div class="step-row" id="step-8">
+        <div class="step-indicator waiting">8</div>
+        <span class="step-label">Release final payment -- goal complete</span>
+        <span class="step-detail">settlement</span>
+      </div>
+    </div>
+
     <!-- Panels -->
     <div class="grid">
       <div class="panel">
@@ -960,6 +1158,18 @@
       </div>
     </div>
 
+    <!-- Vision -->
+    <div class="vision-section">
+      <h2>The future of <span>agent commerce</span></h2>
+      <p>Agent Mesh is a prototype for a world where AI agents operate as economic actors -- discovering services, negotiating prices, and settling payments autonomously. Today it coordinates research and writing. Tomorrow, any agent can register a service and get paid in USDC the moment it delivers value. No invoices. No middlemen. Just autonomous agents, real money, and an auditable trail of every decision.</p>
+      <div class="vision-stats">
+        <div class="vision-stat"><div class="vs-num">3</div><div class="vs-label">Autonomous Wallets</div></div>
+        <div class="vision-stat"><div class="vs-num">4</div><div class="vs-label">Wrapped APIs</div></div>
+        <div class="vision-stat"><div class="vs-num">7</div><div class="vs-label">Locus Features</div></div>
+        <div class="vision-stat"><div class="vs-num">100%</div><div class="vs-label">On-Chain</div></div>
+      </div>
+    </div>
+
     <div class="footer">
       Agent Mesh &middot; Built for <a href="https://synthesis.md" target="_blank">The Synthesis</a> &middot; Powered by <a href="https://paywithlocus.com" target="_blank">Locus</a> on <a href="https://base.org" target="_blank">Base</a>
     </div>
@@ -990,8 +1200,51 @@
         if (ev.type === 'escrow') loadEscrows();
         if (ev.type === 'approval') loadApprovals();
         if (ev.action?.includes('payment')) loadBalances();
+        updateStepper(ev);
       } catch {}
     };
+
+    // Step mapping: SSE action -> step number
+    function updateStepper(ev) {
+      const a = ev.action;
+      if (a === 'balance_verified') setStep(1, 'done');
+      if (a === 'agent_discovered' || a === 'subtasks_planned') { setStep(2, 'done'); setStep(3, 'active'); }
+      if (a === 'escrow_created') { setStep(3, 'done'); setStep(4, 'active'); }
+      if (a === 'escrow_verified') { setStep(4, 'done'); setStep(5, 'active'); }
+      if (a === 'exa_search_completed' || a === 'firecrawl_search_completed' || a === 'research_completed') setStep(5, 'done');
+      if (a === 'escrow_released' && !stepDone6) { stepDone6 = true; setStep(6, 'done'); setStep(7, 'active'); }
+      if (a === 'synthesis_completed') setStep(7, 'done');
+      if (a === 'goal_completed') { setStep(8, 'done'); }
+      // Active states
+      if (a === 'goal_received') { setStep(1, 'active'); }
+      if (a === 'dispatching_task' && ev.task?.includes('Research')) setStep(5, 'active');
+      if (a === 'dispatching_task' && ev.task?.includes('Synth')) setStep(7, 'active');
+      if (a === 'payment_initiated' || a === 'payment_sent' || a === 'payment_completed') {
+        if (stepDone6) setStep(8, 'active');
+        else setStep(6, 'active');
+      }
+    }
+    let stepDone6 = false;
+    function setStep(n, state) {
+      const row = $(`step-${n}`);
+      if (!row) return;
+      const ind = row.querySelector('.step-indicator');
+      row.className = `step-row ${state}`;
+      ind.className = `step-indicator ${state}`;
+      if (state === 'done') ind.textContent = 'ok';
+      else if (state === 'error') ind.textContent = '!';
+    }
+    function resetStepper() {
+      stepDone6 = false;
+      for (let i = 1; i <= 8; i++) {
+        const row = $(`step-${i}`);
+        if (!row) continue;
+        const ind = row.querySelector('.step-indicator');
+        row.className = 'step-row';
+        ind.className = 'step-indicator waiting';
+        ind.textContent = String(i);
+      }
+    }
 
     function agentCls(name) {
       if (!name) return 'm';
@@ -1206,6 +1459,10 @@
       $('s-bud').textContent = `$${budget.toFixed(2)}`;
       $('s-sp').textContent = '$0.00';
       $('reportOut').innerHTML = '<div class="empty pulsing">agents are researching and synthesizing...</div>';
+
+      // Show stepper
+      resetStepper();
+      $('stepper').classList.add('active');
 
       // Animate
       document.querySelectorAll('.acard').forEach(c => c.classList.add('glow'));

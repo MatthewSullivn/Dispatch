@@ -740,11 +740,7 @@
     .tl-agent.m { color: #00d4aa; }
     .tl-agent.l { color: #a78bfa; }
     .tl-act { font-family: 'JetBrains Mono', monospace; color: #7a82a0; font-size: 10px; }
-    .tl-det { color: #5a6278; font-size: 11px; }
-    .tl-det.pay { color: #00d4aa; font-weight: 600; }
-    .tl-det.err { color: #ff6b6b; }
-    .tl-det.api { color: #a78bfa; }
-    .tl-det.esc { color: #4ecdc4; }
+    .tl-det { color: #7a82a0; font-size: 11px; }
     .tl-icon { font-size: 8px; min-width: 14px; color: #6b7394; }
     .tl-icon.ic-pay { color: #00d4aa; }
     .tl-icon.ic-esc { color: #4ecdc4; }
@@ -1692,13 +1688,7 @@
       return '';
     }
 
-    function detailClass(action, type) {
-      if (action?.includes('payment') || action?.includes('released')) return 'pay';
-      if (action?.includes('failed') || action?.includes('error')) return 'err';
-      if (type === 'api' || action?.includes('api')) return 'api';
-      if (type === 'escrow') return 'esc';
-      return '';
-    }
+    function detailClass() { return ''; }
 
     function addTimelineEntry(ev) {
       const tl = $('timeline');

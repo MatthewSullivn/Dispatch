@@ -148,6 +148,86 @@
       font-weight: 400;
     }
 
+    /* ── Locus Integration ── */
+    .locus-section {
+      margin: 36px 0;
+    }
+    .locus-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 700px) { .locus-grid { grid-template-columns: 1fr 1fr; } }
+    .locus-feat {
+      background: rgba(12,14,22,0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0,212,170,0.06);
+      border-radius: 12px;
+      padding: 16px 18px;
+      transition: all 0.3s ease;
+    }
+    .locus-feat:hover {
+      border-color: rgba(0,212,170,0.15);
+      box-shadow: 0 4px 20px rgba(0,212,170,0.04);
+      transform: translateY(-1px);
+    }
+    .locus-feat .feat-check {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #00d4aa;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .locus-feat .feat-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #d0d4de;
+      letter-spacing: -0.2px;
+      margin-bottom: 4px;
+    }
+    .locus-feat .feat-desc {
+      font-size: 10px;
+      color: #4a5068;
+      line-height: 1.5;
+    }
+    .locus-feat .feat-tag {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .feat-tag.core { background: rgba(0,212,170,0.08); color: #00d4aa; border: 1px solid rgba(0,212,170,0.15); }
+    .feat-tag.bonus { background: rgba(167,139,250,0.08); color: #a78bfa; border: 1px solid rgba(167,139,250,0.15); }
+    .feat-tag.safety { background: rgba(255,230,109,0.08); color: #ffe66d; border: 1px solid rgba(255,230,109,0.15); }
+
+    /* ── Reasoning Log ── */
+    .reason-entry {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      align-items: baseline;
+      font-size: 11px;
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+    }
+    .reason-entry:last-child { border-bottom: none; }
+    .reason-agent { font-weight: 700; min-width: 80px; font-size: 10px; }
+    .reason-agent.o { color: #ff6b6b; }
+    .reason-agent.r { color: #4ecdc4; }
+    .reason-agent.w { color: #ffe66d; }
+    .reason-action {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: #3e4460;
+      min-width: 100px;
+    }
+    .reason-text { color: #6a7090; font-size: 11px; line-height: 1.5; }
+
     /* ── Agent Network ── */
     .network-section {
       margin: 36px 0;
@@ -733,8 +813,51 @@
         <p>AI agents can think and act, but can't safely pay each other. Agent Mesh gives every agent its own Locus wallet with spending controls, turning autonomous coordination into an economic reality.</p>
       </div>
       <div class="about-card">
-        <h3>What's under the hood</h3>
-        <p>Service registry for agent discovery. Locus checkout sessions for escrow. Spending controls with human approval gates. Wrapped pay-per-use APIs (Exa, Grok, Gemini). Full audit trail of every payment.</p>
+        <h3>Safety and controls</h3>
+        <p>Rate limiting (30s cooldown, 10 goals/hr). Budget caps ($1.00 max per goal). Locus spending controls with approval thresholds. Checkout escrow locks funds before work starts. Full audit trail with agent reasoning logs.</p>
+      </div>
+    </div>
+
+    <!-- Locus Integration -->
+    <div class="locus-section">
+      <div class="section-label">Locus Integration</div>
+      <div class="locus-grid">
+        <div class="locus-feat">
+          <div class="feat-check">[x]</div>
+          <div class="feat-name">Agent Wallets</div>
+          <div class="feat-desc">3 autonomous Locus wallets on Base, each with its own API key. Agents hold, send, and receive USDC independently.</div>
+          <span class="feat-tag core">core</span>
+        </div>
+        <div class="locus-feat">
+          <div class="feat-check">[x]</div>
+          <div class="feat-name">Checkout Session Escrow</div>
+          <div class="feat-desc">Funds locked via Locus checkout sessions before work begins. Worker preflight verifies escrow. Payment released on delivery.</div>
+          <span class="feat-tag bonus">bonus</span>
+        </div>
+        <div class="locus-feat">
+          <div class="feat-check">[x]</div>
+          <div class="feat-name">Pay-Per-Use Wrapped APIs</div>
+          <div class="feat-desc">Agents call Exa, Firecrawl, Gemini, and Grok through Locus. Each API call is billed in USDC to the calling agent's wallet.</div>
+          <span class="feat-tag bonus">bonus</span>
+        </div>
+        <div class="locus-feat">
+          <div class="feat-check">[x]</div>
+          <div class="feat-name">Spending Controls</div>
+          <div class="feat-desc">Configurable approval thresholds and allowance caps prevent overspending. Payments above threshold require human approval.</div>
+          <span class="feat-tag bonus">bonus</span>
+        </div>
+        <div class="locus-feat">
+          <div class="feat-check">[x]</div>
+          <div class="feat-name">On-Chain Auditability</div>
+          <div class="feat-desc">Every payment is a real USDC transfer on Base, verifiable on BaseScan. Reasoning logs explain why each payment was made.</div>
+          <span class="feat-tag bonus">bonus</span>
+        </div>
+        <div class="locus-feat">
+          <div class="feat-check">[x]</div>
+          <div class="feat-name">Self-Registering Wallets</div>
+          <div class="feat-desc">Agents self-register via Locus API. No manual account creation. Setup script handles wallet deployment and API key generation.</div>
+          <span class="feat-tag safety">required</span>
+        </div>
       </div>
     </div>
 
@@ -824,6 +947,11 @@
       <div class="panel full">
         <div class="ph">On-Chain Transactions <span class="count" id="txn-count">0</span></div>
         <div class="pb" id="txnList"><div class="empty">loading transactions...</div></div>
+      </div>
+
+      <div class="panel full">
+        <div class="ph">Agent Reasoning Log <span class="count" id="rsn-count">0</span></div>
+        <div class="pb" id="reasonList"><div class="empty">run a goal to see agent decision-making and reasoning</div></div>
       </div>
 
       <div class="panel full">
@@ -1045,6 +1173,27 @@
       } catch {}
     }
 
+    async function loadReasoning() {
+      try {
+        const r = await fetch('/api/reasoning');
+        const d = await r.json();
+        const el = $('reasonList');
+        const items = d.reasoning || [];
+        $('rsn-count').textContent = items.length;
+        if (items.length === 0) { el.innerHTML = '<div class="empty">run a goal to see agent decision-making and reasoning</div>'; return; }
+        el.innerHTML = items.map(ev => {
+          const cls = agentCls(ev.agent);
+          const reasoning = ev.reasoning || ev.goal || ev.task || ev.description || '';
+          const amount = ev.amount ? ` <span style="color:#00d4aa;font-family:\'JetBrains Mono\',monospace;font-weight:700">$${ev.amount} USDC</span>` : '';
+          return `<div class="reason-entry">
+            <span class="reason-agent ${cls}">${ev.agent || 'mesh'}</span>
+            <span class="reason-action">${ev.action}</span>
+            <span class="reason-text">${reasoning}${amount}</span>
+          </div>`;
+        }).join('');
+      } catch {}
+    }
+
     async function run() {
       const goal = $('goalIn').value.trim();
       if (!goal) return;
@@ -1099,6 +1248,7 @@
       loadBalances();
       loadEscrows();
       loadApprovals();
+      loadReasoning();
       setTimeout(loadTransactions, 3000);
     }
 

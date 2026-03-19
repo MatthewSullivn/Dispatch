@@ -1,0 +1,26 @@
+{
+  "name": "agent-mesh",
+  "version": "1.0.0",
+  "description": "Agent-to-agent payment mesh powered by Locus on Base",
+  "main": "src/server.js",
+  "scripts": {
+    "setup": "node src/setup.js",
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [
+    "locus",
+    "ai-agents",
+    "payments",
+    "base",
+    "usdc"
+  ],
+  "author": "Matthew Sullivan",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "ethers": "^6.16.0",
+    "express": "^5.2.1",
+    "uuid": "^13.0.0"
+  }
+}

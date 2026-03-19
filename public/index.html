@@ -1539,7 +1539,13 @@
       try {
         const r = await fetch('/api/agents');
         const d = await r.json();
-        d.agents.forEach(a => { if (a.wallet) WALLET_NAMES[a.wallet.toLowerCase()] = a.role.charAt(0).toUpperCase() + a.role.slice(1); });
+        d.agents.forEach(a => {
+          if (a.wallet) {
+            const label = a.role.charAt(0).toUpperCase() + a.role.slice(1);
+            WALLET_NAMES[a.wallet.toLowerCase()] = label;
+            WALLET_NAMES['_role_' + a.role] = a.wallet.toLowerCase();
+          }
+        });
       } catch {}
     })();
 
@@ -1547,6 +1553,11 @@
       if (!addr) return '?';
       const name = WALLET_NAMES[addr.toLowerCase()];
       return name || addr.slice(0, 6) + '...' + addr.slice(-4);
+    }
+    function walletLink(addr, label) {
+      if (!addr) return esc(label || '?');
+      const display = label || walletLabel(addr);
+      return `<a href="https://basescan.org/address/${encodeURIComponent(addr)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:1px dashed rgba(255,255,255,0.1);transition:border-color 0.2s" onmouseover="this.style.borderColor='#00d4aa'" onmouseout="this.style.borderColor='rgba(255,255,255,0.1)'">${esc(display)}</a>`;
     }
 
     async function loadTransactions() {
@@ -1560,14 +1571,17 @@
         el.innerHTML = txns.map(tx => {
           const agentCls = tx._agent === 'orchestrator' ? 'o' : tx._agent === 'researcher' ? 'r' : 'w';
           const statusCls = (tx.status || '').toLowerCase().includes('confirm') ? 'confirmed' : (tx.status || '').toLowerCase().includes('queue') ? 'queued' : 'failed';
-          const to = walletLabel(tx.to_address);
+          const toLabel = walletLabel(tx.to_address);
+          const toLink = walletLink(tx.to_address, toLabel);
+          const fromAddr = WALLET_NAMES['_role_' + tx._agent] || '';
+          const fromLink = fromAddr ? walletLink(fromAddr, tx._agent) : esc(tx._agent);
           const memo = tx.memo || 'Transfer';
           const hash = tx.tx_hash ? tx.tx_hash.slice(0, 10) + '...' : '';
           const time = new Date(tx.created_at).toLocaleTimeString('en-US', { hour12: false });
           return `<div class="txn">
-            <span class="txn-agent ${agentCls}">${esc(tx._agent)}</span>
-            <span style="color:#2e3348;font-size:10px">${esc(time)}</span>
-            <span style="color:#7a82a0;font-size:10px">&rarr; ${esc(to)}</span>
+            <span class="txn-agent ${agentCls}">${fromLink}</span>
+            <span style="color:#6b7394;font-size:10px">${esc(time)}</span>
+            <span style="color:#7a82a0;font-size:10px">&rarr; ${toLink}</span>
             <span class="txn-memo">${esc(memo)}</span>
             <span class="txn-amount">$${parseFloat(tx.amount_usdc || 0).toFixed(2)}</span>
             <span class="txn-status ${statusCls}">${esc(tx.status)}</span>

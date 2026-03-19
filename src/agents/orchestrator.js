@@ -200,7 +200,12 @@ class OrchestratorAgent extends BaseAgent {
       }
       return session;
     } catch (err) {
-      // Escrow failed — will fall back to direct payment after work
+      this.log('escrow_fallback', {
+        type: 'escrow',
+        error: err.message,
+        task: task.description,
+        reasoning: `Checkout escrow failed: ${err.message}. Falling back to direct wallet payment after work completes.`,
+      });
       return null;
     }
   }

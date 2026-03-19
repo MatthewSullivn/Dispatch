@@ -638,18 +638,16 @@
 
     /* ── Escrow Cards ── */
     .esc {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 14px;
+      padding: 16px 18px;
       background: rgba(8,10,18,0.4);
       border: 1px solid rgba(255,255,255,0.03);
-      border-radius: 10px;
-      margin-bottom: 8px;
+      border-radius: 12px;
+      margin-bottom: 12px;
       font-size: 11px;
-      transition: border-color 0.2s;
+      transition: border-color 0.3s;
     }
     .esc:hover { border-color: rgba(255,255,255,0.06); }
+    .esc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
     .esc-status {
       padding: 3px 10px;
       border-radius: 100px;
@@ -662,6 +660,67 @@
     .esc-status.pending { background: rgba(255,230,109,0.08); color: #ffe66d; border: 1px solid rgba(255,230,109,0.15); }
     .esc-status.released { background: rgba(0,212,170,0.08); color: #00d4aa; border: 1px solid rgba(0,212,170,0.15); }
     .esc-status.failed { background: rgba(255,107,107,0.08); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.15); }
+    .esc-amount {
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #00d4aa, #00e8c0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .esc-flow { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+    .esc-flow-agent {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .esc-flow-agent.buyer { color: #ff6b6b; }
+    .esc-flow-agent.seller { color: #4ecdc4; }
+    .esc-flow-arrow { color: #2e3348; font-size: 10px; }
+    .esc-desc { color: #4a5068; font-size: 10px; margin-bottom: 10px; line-height: 1.4; }
+    .esc-lifecycle {
+      display: flex;
+      gap: 0;
+      align-items: center;
+    }
+    .esc-phase {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+    .esc-phase-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .esc-phase-dot.done { background: #00d4aa; box-shadow: 0 0 6px rgba(0,212,170,0.4); }
+    .esc-phase-dot.active { background: #ffe66d; box-shadow: 0 0 6px rgba(255,230,109,0.4); animation: pulse 1.5s ease-in-out infinite; }
+    .esc-phase-dot.waiting { background: #1e2030; border: 1px solid rgba(255,255,255,0.06); }
+    .esc-phase-label { color: #3e4460; }
+    .esc-phase-label.done { color: #5a6278; }
+    .esc-phase-connector {
+      width: 20px;
+      height: 1px;
+      background: rgba(255,255,255,0.04);
+      margin: 0 4px;
+    }
+    .esc-phase-connector.done { background: rgba(0,212,170,0.2); }
+    .esc-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+      font-size: 9px;
+      color: #2e3348;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .esc-meta a { color: #2e3348; text-decoration: none; transition: color 0.2s; }
+    .esc-meta a:hover { color: #00d4aa; }
 
     /* ── Timeline ── */
     .tl-entry {
@@ -1381,10 +1440,42 @@
         if (d.escrows.length === 0) { el.innerHTML = '<div class="empty">no escrows yet</div>'; return; }
         el.innerHTML = d.escrows.map(e => {
           const stCls = e.status.includes('release') ? 'released' : e.status.includes('fail') ? 'failed' : 'pending';
+          const phases = ['created', 'preflight', 'work', 'released'];
+          const phaseLabels = ['Created', 'Preflight', 'Work', 'Released'];
+          const statusOrder = { pending: 0, preflight_ok: 1, preflight_failed: 1, released: 3 };
+          const currentPhase = statusOrder[e.status] ?? 0;
+          // If released, all phases done. If preflight_ok, phases 0-1 done, 2 active. If pending, 0 done, 1 active.
+          const activePhase = e.status === 'released' ? 4 : (e.status === 'preflight_ok' ? 2 : (e.status === 'pending' ? 1 : currentPhase));
+
+          const lifecycleHtml = phases.map((p, i) => {
+            const dotCls = i < activePhase ? 'done' : i === activePhase ? 'active' : 'waiting';
+            const lblCls = i < activePhase ? 'done' : '';
+            const connector = i < phases.length - 1
+              ? `<div class="esc-phase-connector ${i < activePhase ? 'done' : ''}"></div>`
+              : '';
+            return `<div class="esc-phase"><div class="esc-phase-dot ${dotCls}"></div><span class="esc-phase-label ${lblCls}">${phaseLabels[i]}</span></div>${connector}`;
+          }).join('');
+
+          const ts = e.createdAt ? new Date(e.createdAt).toLocaleTimeString() : '';
+          const paid = e.paidAt ? new Date(e.paidAt).toLocaleTimeString() : '';
+
           return `<div class="esc">
-            <span class="esc-status ${stCls}">${esc(e.status)}</span>
-            <span style="color:#5a6278">${esc(e.buyerAgent)} &rarr; ${esc(e.sellerAgent)}</span>
-            <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-weight:700;background:linear-gradient(135deg,#00d4aa,#00e8c0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">$${esc(e.amount)}</span>
+            <div class="esc-header">
+              <span class="esc-status ${stCls}">${esc(e.status)}</span>
+              <span class="esc-amount">$${esc(String(e.amount))}</span>
+            </div>
+            <div class="esc-flow">
+              <span class="esc-flow-agent buyer">${esc(e.buyerAgent)}</span>
+              <span class="esc-flow-arrow">&rarr;</span>
+              <span class="esc-flow-agent seller">${esc(e.sellerAgent)}</span>
+            </div>
+            ${e.description ? `<div class="esc-desc">${esc(e.description)}</div>` : ''}
+            <div class="esc-lifecycle">${lifecycleHtml}</div>
+            <div class="esc-meta">
+              ${ts ? `<span>Created ${esc(ts)}</span>` : ''}
+              ${paid ? `<span>Paid ${esc(paid)}</span>` : ''}
+              ${e.checkoutUrl ? `<a href="${esc(e.checkoutUrl)}" target="_blank" rel="noopener">Checkout &rarr;</a>` : ''}
+            </div>
           </div>`;
         }).join('');
       } catch {}

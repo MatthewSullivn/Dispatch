@@ -745,7 +745,12 @@
     .tl-det.err { color: #ff6b6b; }
     .tl-det.api { color: #a78bfa; }
     .tl-det.esc { color: #4ecdc4; }
-    .tl-icon { font-family: 'JetBrains Mono', monospace; font-size: 10px; min-width: 14px; color: #6b7394; }
+    .tl-icon { font-size: 8px; min-width: 14px; color: #6b7394; }
+    .tl-icon.ic-pay { color: #00d4aa; }
+    .tl-icon.ic-esc { color: #4ecdc4; }
+    .tl-icon.ic-api { color: #a78bfa; }
+    .tl-icon.ic-goal { color: #ff6b6b; }
+    .tl-icon.ic-appr { color: #ffe66d; }
 
     /* ── Transaction Cards ── */
     .txn {
@@ -1604,7 +1609,7 @@
       toast.className = 'toast';
       const amountHtml = ev.amount ? `<span class="toast-amount">$${parseFloat(ev.amount).toFixed(2)}</span>` : '';
       toast.innerHTML = `
-        <div class="toast-icon ${cfg.icon}">\u25C9</div>
+        <div class="toast-icon ${cfg.icon}">&bull;</div>
         <div class="toast-body">
           <div class="toast-title">${esc(cfg.title)}</div>
           <div class="toast-msg">${esc(cfg.msg(ev) || '')}</div>
@@ -1678,15 +1683,13 @@
       return 'm';
     }
 
-    function eventIcon(action, type) {
-      if (type === 'payment' || action?.includes('payment')) return '\u25C8';
-      if (type === 'escrow' || action?.includes('escrow')) return '\u25C7';
-      if (type === 'approval' || action?.includes('approval')) return '\u25B3';
-      if (type === 'api' || action?.includes('api')) return '\u25B8';
-      if (type === 'registry' || action?.includes('register')) return '\u25CF';
-      if (action?.includes('goal')) return '\u25C9';
-      if (action?.includes('dispatch')) return '\u25B6';
-      return '\u25AA';
+    function eventIconClass(action, type) {
+      if (type === 'payment' || action?.includes('payment')) return 'ic-pay';
+      if (type === 'escrow' || action?.includes('escrow')) return 'ic-esc';
+      if (type === 'approval' || action?.includes('approval')) return 'ic-appr';
+      if (type === 'api' || action?.includes('api')) return 'ic-api';
+      if (action?.includes('goal')) return 'ic-goal';
+      return '';
     }
 
     function detailClass(action, type) {
@@ -1707,7 +1710,7 @@
       row.className = 'tl-entry';
       const time = new Date(ev.timestamp).toLocaleTimeString('en-US', { hour12: false });
       const cls = agentCls(ev.agent);
-      const icon = eventIcon(ev.action, ev.type);
+      const icCls = eventIconClass(ev.action, ev.type);
       const dcls = detailClass(ev.action, ev.type);
 
       let detail = '';
@@ -1719,7 +1722,7 @@
       else if (ev.error) detail = esc(ev.error?.slice(0, 80));
       else if (ev.sessionId) detail = `session:${esc(ev.sessionId?.slice(0, 8))}`;
 
-      row.innerHTML = `<span class="tl-icon">${esc(icon)}</span><span class="tl-time">${esc(time)}</span><span class="tl-agent ${cls}">${esc(ev.agent || 'mesh')}</span><span class="tl-act">${esc(ev.action)}</span><span class="tl-det ${dcls}">${detail}</span>`;
+      row.innerHTML = `<span class="tl-icon ${icCls}">&bull;</span><span class="tl-time">${esc(time)}</span><span class="tl-agent ${cls}">${esc(ev.agent || 'mesh')}</span><span class="tl-act">${esc(ev.action)}</span><span class="tl-det ${dcls}">${detail}</span>`;
       tl.appendChild(row);
       tl.scrollTop = tl.scrollHeight;
     }

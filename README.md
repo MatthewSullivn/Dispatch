@@ -61,21 +61,31 @@ Agent Mesh uses Locus as its core payment layer. Remove Locus and the entire pro
 
 ## Architecture
 
+Agent Mesh is designed around four architectural principles:
+
+1. **Every agent owns its wallet.** Each agent has its own Locus API key and wallet address. No shared credentials, no central treasury. Agents pay for their own API calls.
+2. **Payments are escrow-first.** Funds are locked via Locus checkout sessions before work starts. Workers verify escrow via preflight. Payment releases only after delivery.
+3. **Discovery is marketplace-driven.** The orchestrator doesn't hardcode which agent to use. It queries the service registry and picks the cheapest capable provider.
+4. **Everything is auditable.** Every action emits a structured event with reasoning context. The full decision trail is available at `/api/reasoning`.
+
 ```
 src/
+  config.js          Centralized agent definitions, rate limits, budget caps
   server.js          Express server, API routes, SSE streaming
   locus.js           Locus API client (wallets, payments, checkout, wrapped APIs)
   escrow.js          Escrow manager wrapping Locus checkout sessions
-  registry.js        Service marketplace for agent discovery
+  registry.js        Service marketplace for agent discovery and pricing
   event-bus.js       Global event emitter for real-time timeline
   agents/
-    base-agent.js    Base class: wallet, payments, API calls, audit trail
+    base-agent.js    Base class: wallet, payments, email escrow, API calls, audit trail
     orchestrator.js  Discovers agents, manages budget, escrows, dispatches work
     research-agent.js  Web search via Exa + Firecrawl (Locus wrapped APIs)
     writer-agent.js  Report synthesis via Gemini + Grok (Locus wrapped APIs)
 public/
   index.html         Dashboard: agent network, timeline, escrows, transactions
 ```
+
+To add a new agent: define it in `config.js`, create its class extending `BaseAgent`, and register its service. The orchestrator will discover and hire it automatically.
 
 ## Agents
 

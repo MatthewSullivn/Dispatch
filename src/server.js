@@ -11,27 +11,18 @@
  *   - GET /api/events/stream: Real-time SSE stream
  *   - GET /api/audit: Complete audit trail
  *
- * Rate limited: 30s cooldown, 10 goals/hour, $1.00 max budget per goal.
+ * Rate limited and budget-capped. All constants defined in config.js.
  */
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const { AGENTS, RATE_LIMITS, BUDGET, SYSTEM } = require('./config');
 const meshEvents = require('./event-bus');
 const ServiceRegistry = require('./registry');
 const EscrowManager = require('./escrow');
 const OrchestratorAgent = require('./agents/orchestrator');
 const ResearchAgent = require('./agents/research-agent');
 const WriterAgent = require('./agents/writer-agent');
-
-// ── Constants ────────────────────────────────────────────────────
-
-const MAX_TIMELINE_EVENTS = 500;
-const GOAL_COOLDOWN_MS = 30000;
-const MAX_GOALS_PER_HOUR = 10;
-const ONE_HOUR_MS = 3600000;
-const MAX_BUDGET_PER_GOAL = 1.0;
-const MAX_BUDGET_PER_TASK = 0.25;
-const SERVICE_PRICE_USDC = 0.05;
 
 // Actions that carry decision-making context for the reasoning log
 const REASONING_ACTIONS = new Set([
@@ -57,9 +48,8 @@ const sseClients = new Set();
 // Capture all agent events into the rolling timeline and SSE stream
 meshEvents.on('agent-event', (event) => {
   masterTimeline.push(event);
-  if (masterTimeline.length > MAX_TIMELINE_EVENTS) masterTimeline.shift();
+  if (masterTimeline.length > SYSTEM.maxTimelineEvents) masterTimeline.shift();
 
-  // Broadcast to all connected SSE clients
   const data = JSON.stringify(event);
   for (const client of sseClients) {
     client.write(`data: ${data}\n\n`);
@@ -68,7 +58,6 @@ meshEvents.on('agent-event', (event) => {
 
 /**
  * Callback invoked when a payment exceeds the Locus spending threshold.
- * Logs the approval requirement and adds it to the pending list.
  */
 function onApprovalNeeded(approval) {
   pendingApprovals.push(approval);
@@ -87,59 +76,62 @@ function onApprovalNeeded(approval) {
 
 let orchestrator, researcher, writer;
 
-/** Create agents, register workers, and populate the service registry. */
+/**
+ * Create agents from config, register workers, and populate the
+ * service registry. All agent definitions live in config.js.
+ */
 function initAgents() {
+  const rConf = AGENTS.researcher;
+  const wConf = AGENTS.writer;
+  const oConf = AGENTS.orchestrator;
+
   researcher = new ResearchAgent({
-    name: 'MeshResearcher',
-    locusApiKey: process.env.RESEARCHER_LOCUS_API_KEY,
-    walletAddress: process.env.RESEARCHER_WALLET_ADDRESS,
+    name: rConf.name,
+    locusApiKey: rConf.locusApiKey,
+    walletAddress: rConf.walletAddress,
     onApprovalNeeded,
   });
+  researcher.agentEmail = rConf.email;
 
   writer = new WriterAgent({
-    name: 'MeshWriter',
-    locusApiKey: process.env.WRITER_LOCUS_API_KEY,
-    walletAddress: process.env.WRITER_WALLET_ADDRESS,
+    name: wConf.name,
+    locusApiKey: wConf.locusApiKey,
+    walletAddress: wConf.walletAddress,
     onApprovalNeeded,
   });
+  writer.agentEmail = wConf.email;
 
   orchestrator = new OrchestratorAgent({
-    name: 'MeshOrchestrator',
-    locusApiKey: process.env.ORCHESTRATOR_LOCUS_API_KEY,
-    walletAddress: process.env.ORCHESTRATOR_WALLET_ADDRESS,
+    name: oConf.name,
+    locusApiKey: oConf.locusApiKey,
+    walletAddress: oConf.walletAddress,
     onApprovalNeeded,
     registry,
     escrowManager,
   });
 
-  // Set agent emails for email escrow fallback
-  researcher.agentEmail = process.env.RESEARCHER_EMAIL || null;
-  writer.agentEmail = process.env.WRITER_EMAIL || null;
-
   orchestrator.registerWorker(researcher);
   orchestrator.registerWorker(writer);
-  orchestrator.setBudget(5.0, 1.0);
+  orchestrator.setBudget(BUDGET.defaultTotal, BUDGET.defaultPerTask);
 
-  // Register services in the marketplace
-  researcher.registerService(registry, {
-    name: 'Web Research',
-    description: 'Search the web, scrape websites, and gather data using Exa, Firecrawl, and Grok via Locus wrapped APIs',
-    price: SERVICE_PRICE_USDC,
-    capabilities: ['research', 'search', 'scrape', 'data-gathering'],
-  });
-
-  writer.registerService(registry, {
-    name: 'Report Synthesis',
-    description: 'Synthesize research findings into professional reports using Gemini or Grok LLMs via Locus wrapped APIs',
-    price: SERVICE_PRICE_USDC,
-    capabilities: ['writing', 'synthesis', 'report', 'summarization'],
-  });
+  // Register services from config
+  if (rConf.service) researcher.registerService(registry, rConf.service);
+  if (wConf.service) writer.registerService(registry, wConf.service);
 
   console.log('Agents initialized:');
-  console.log(`  Orchestrator: ${process.env.ORCHESTRATOR_WALLET_ADDRESS}`);
-  console.log(`  Researcher:   ${process.env.RESEARCHER_WALLET_ADDRESS}`);
-  console.log(`  Writer:       ${process.env.WRITER_WALLET_ADDRESS}`);
+  console.log(`  Orchestrator: ${oConf.walletAddress}`);
+  console.log(`  Researcher:   ${rConf.walletAddress}`);
+  console.log(`  Writer:       ${wConf.walletAddress}`);
   console.log(`  Services:     ${registry.getAll().length} registered`);
+}
+
+/** Helper: iterate over all agent instances. */
+function allAgents() {
+  return [
+    { name: 'orchestrator', agent: orchestrator },
+    { name: 'researcher', agent: researcher },
+    { name: 'writer', agent: writer },
+  ];
 }
 
 // ── API Routes ───────────────────────────────────────────────────
@@ -168,25 +160,26 @@ app.post('/api/goal', async (req, res) => {
   const { goal, budget, maxPerTask } = req.body;
   if (!goal) return res.status(400).json({ error: 'goal is required' });
 
-  // Rate limit: cooldown between goals
   const now = Date.now();
-  if (now - lastGoalTime < GOAL_COOLDOWN_MS) {
-    const wait = Math.ceil((GOAL_COOLDOWN_MS - (now - lastGoalTime)) / 1000);
+
+  // Rate limit: cooldown between goals
+  if (now - lastGoalTime < RATE_LIMITS.goalCooldownMs) {
+    const wait = Math.ceil((RATE_LIMITS.goalCooldownMs - (now - lastGoalTime)) / 1000);
     return res.status(429).json({ error: `Rate limited. Try again in ${wait}s.` });
   }
 
   // Rate limit: max goals per hour
-  while (goalHourWindow.length && goalHourWindow[0] < now - ONE_HOUR_MS) goalHourWindow.shift();
-  if (goalHourWindow.length >= MAX_GOALS_PER_HOUR) {
-    return res.status(429).json({ error: `Rate limited. Max ${MAX_GOALS_PER_HOUR} goals per hour.` });
+  while (goalHourWindow.length && goalHourWindow[0] < now - RATE_LIMITS.oneHourMs) goalHourWindow.shift();
+  if (goalHourWindow.length >= RATE_LIMITS.maxGoalsPerHour) {
+    return res.status(429).json({ error: `Rate limited. Max ${RATE_LIMITS.maxGoalsPerHour} goals per hour.` });
   }
 
   lastGoalTime = now;
   goalHourWindow.push(now);
 
   // Cap budget to prevent abuse
-  const safeBudget = Math.min(budget || orchestrator.budget.total, MAX_BUDGET_PER_GOAL);
-  const safePerTask = Math.min(maxPerTask || orchestrator.budget.perTask, MAX_BUDGET_PER_TASK);
+  const safeBudget = Math.min(budget || orchestrator.budget.total, BUDGET.maxPerGoal);
+  const safePerTask = Math.min(maxPerTask || orchestrator.budget.perTask, BUDGET.maxPerTask);
   if (budget || maxPerTask) {
     orchestrator.setBudget(safeBudget, safePerTask);
   }
@@ -203,13 +196,7 @@ app.post('/api/goal', async (req, res) => {
 /** USDC balances for all agent wallets. */
 app.get('/api/balances', async (req, res) => {
   const balances = {};
-  const agents = [
-    { name: 'orchestrator', agent: orchestrator },
-    { name: 'researcher', agent: researcher },
-    { name: 'writer', agent: writer },
-  ];
-
-  await Promise.all(agents.map(async ({ name, agent }) => {
+  await Promise.all(allAgents().map(async ({ name, agent }) => {
     try {
       const bal = await agent.getBalance();
       balances[name] = bal.data?.data || bal.data;
@@ -217,7 +204,6 @@ app.get('/api/balances', async (req, res) => {
       balances[name] = { error: err.message };
     }
   }));
-
   res.json({ balances });
 });
 
@@ -256,7 +242,6 @@ app.get('/api/events/stream', (req, res) => {
     Connection: 'keep-alive',
   });
   res.write(`data: ${JSON.stringify({ action: 'connected', timestamp: new Date().toISOString() })}\n\n`);
-
   sseClients.add(res);
   req.on('close', () => sseClients.delete(res));
 });
@@ -297,24 +282,19 @@ app.get('/api/reasoning', (req, res) => {
 /** Agent names, roles, and wallet addresses. */
 app.get('/api/agents', (req, res) => {
   res.json({
-    agents: [
-      { name: orchestrator?.name, role: 'orchestrator', wallet: orchestrator?.walletAddress },
-      { name: researcher?.name, role: 'researcher', wallet: researcher?.walletAddress },
-      { name: writer?.name, role: 'writer', wallet: writer?.walletAddress },
-    ],
+    agents: allAgents().map(({ agent }) => ({
+      name: agent?.name,
+      role: agent?.role,
+      wallet: agent?.walletAddress,
+    })),
   });
 });
 
 /** On-chain USDC transactions aggregated from all agent wallets. */
 app.get('/api/transactions', async (req, res) => {
   try {
-    const agents = [
-      { name: 'orchestrator', agent: orchestrator },
-      { name: 'researcher', agent: researcher },
-      { name: 'writer', agent: writer },
-    ];
     const all = [];
-    await Promise.all(agents.map(async ({ name, agent }) => {
+    await Promise.all(allAgents().map(async ({ name, agent }) => {
       try {
         const result = await agent.locus.getTransactions();
         const txns = result.data?.data?.transactions || result.data?.transactions || [];
@@ -332,14 +312,12 @@ app.get('/api/transactions', async (req, res) => {
 
 // ── Start ────────────────────────────────────────────────────────
 
-const PORT = process.env.PORT || 3000;
-
 try {
   initAgents();
 } catch (err) {
   console.warn('Agent init failed:', err.message);
 }
 
-app.listen(PORT, () => {
-  console.log(`Agent Mesh running on http://localhost:${PORT}`);
+app.listen(SYSTEM.port, () => {
+  console.log(`Agent Mesh running on http://localhost:${SYSTEM.port}`);
 });

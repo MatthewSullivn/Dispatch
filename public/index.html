@@ -978,6 +978,91 @@
       margin-top: 4px;
     }
 
+    /* ── Toast Notifications ── */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+      max-width: 380px;
+    }
+    .toast {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: rgba(18,20,35,0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.06);
+      font-size: 12px;
+      color: #c0c8e0;
+      animation: toastIn 0.4s ease, toastOut 0.4s ease 4.6s forwards;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .toast-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+      font-weight: 700;
+    }
+    .toast-icon.escrow { background: rgba(78,205,196,0.12); color: #4ecdc4; }
+    .toast-icon.payment { background: rgba(0,212,170,0.12); color: #00d4aa; }
+    .toast-icon.goal { background: rgba(255,107,107,0.12); color: #ff6b6b; }
+    .toast-icon.api { background: rgba(255,230,109,0.12); color: #ffe66d; }
+    .toast-icon.done { background: rgba(0,212,170,0.12); color: #00d4aa; }
+    .toast-body { flex: 1; min-width: 0; }
+    .toast-title { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .toast-msg { color: #8890a8; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .toast-amount { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; color: #00d4aa; flex-shrink: 0; }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(80px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes toastOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(80px); } }
+
+    /* ── Live Status Banner ── */
+    .status-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      background: rgba(0,212,170,0.04);
+      border: 1px solid rgba(0,212,170,0.1);
+      margin-bottom: 20px;
+      font-size: 12px;
+      color: #8890a8;
+      animation: slideIn 0.3s ease;
+    }
+    .status-banner.active { display: flex; }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00d4aa;
+      animation: pulse 1.5s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    .status-text { flex: 1; }
+    .status-phase { color: #00d4aa; font-weight: 700; }
+
+    /* ── Agent Active States ── */
+    .acard.active-agent {
+      border-color: rgba(0,212,170,0.2);
+      box-shadow: 0 0 20px rgba(0,212,170,0.08);
+    }
+    .acard.active-agent .dot {
+      animation: pulse 1s ease-in-out infinite;
+    }
+
     /* ── Animations ── */
     @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
     .pulsing { animation: pulse 2s ease-in-out infinite; }
@@ -1007,6 +1092,7 @@
   </style>
 </head>
 <body>
+  <div class="toast-container" id="toasts"></div>
   <div class="wrap">
 
     <!-- Hero -->
@@ -1083,6 +1169,12 @@
           <span class="feat-tag safety">required</span>
         </div>
       </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div class="status-banner" id="statusBanner">
+      <div class="status-dot"></div>
+      <div class="status-text"><span class="status-phase" id="statusPhase">Initializing</span> <span id="statusDetail"></span></div>
     </div>
 
     <!-- Agent Network -->
@@ -1318,6 +1410,9 @@
         if (ev.type === 'approval') loadApprovals();
         if (ev.action?.includes('payment')) loadBalances();
         updateStepper(ev);
+        showEventToast(ev);
+        updateStatusBanner(ev);
+        highlightAgent(ev);
       } catch {}
     };
 
@@ -1361,6 +1456,95 @@
         ind.className = 'step-indicator waiting';
         ind.textContent = String(i);
       }
+    }
+
+    // ── Toast Notifications ──
+    const TOAST_EVENTS = {
+      goal_received:        { icon: 'goal',    title: 'Goal Received',       msg: ev => ev.goal?.slice(0, 60) },
+      balance_verified:     { icon: 'done',    title: 'Balance Verified',    msg: ev => `$${parseFloat(ev.balance || 0).toFixed(2)} USDC available` },
+      subtasks_planned:     { icon: 'goal',    title: 'Tasks Planned',       msg: ev => `${ev.count} subtasks created` },
+      agent_discovered:     { icon: 'done',    title: 'Agent Discovered',    msg: ev => `${ev.agent || ev.service} selected from registry` },
+      escrow_created:       { icon: 'escrow',  title: 'Escrow Created',      msg: ev => `$${parseFloat(ev.amount || 0).toFixed(2)} locked for ${ev.seller || 'worker'}` },
+      escrow_verified:      { icon: 'escrow',  title: 'Escrow Verified',     msg: ev => `${ev.agent} confirmed escrow` },
+      escrow_released:      { icon: 'payment', title: 'Escrow Released',     msg: ev => `$${parseFloat(ev.amount || 0).toFixed(2)} paid to ${ev.seller || 'worker'}` },
+      dispatching_task:     { icon: 'api',     title: 'Task Dispatched',     msg: ev => `${ev.task?.slice(0, 50)}` },
+      research_completed:   { icon: 'done',    title: 'Research Complete',   msg: ev => `${ev.providers?.join(', ') || 'search'} finished` },
+      synthesis_completed:  { icon: 'done',    title: 'Report Synthesized',  msg: ev => `via ${ev.provider || 'LLM'}` },
+      payment_completed:    { icon: 'payment', title: 'Payment Sent',        msg: ev => `$${parseFloat(ev.amount || 0).toFixed(2)} USDC on Base` },
+      goal_completed:       { icon: 'done',    title: 'Goal Complete',       msg: ev => `${ev.tasksCompleted} tasks, $${parseFloat(ev.totalSpent || 0).toFixed(2)} spent` },
+      api_call:             { icon: 'api',     title: 'API Call',            msg: ev => `${ev.provider}/${ev.endpoint}` },
+    };
+
+    function showEventToast(ev) {
+      const cfg = TOAST_EVENTS[ev.action];
+      if (!cfg) return;
+      const container = $('toasts');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      const amountHtml = ev.amount ? `<span class="toast-amount">$${parseFloat(ev.amount).toFixed(2)}</span>` : '';
+      toast.innerHTML = `
+        <div class="toast-icon ${cfg.icon}">\u25C9</div>
+        <div class="toast-body">
+          <div class="toast-title">${esc(cfg.title)}</div>
+          <div class="toast-msg">${esc(cfg.msg(ev) || '')}</div>
+        </div>
+        ${amountHtml}`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 5000);
+      // Keep max 4 toasts visible
+      while (container.children.length > 4) container.firstChild.remove();
+    }
+
+    // ── Status Banner ──
+    const STATUS_MAP = {
+      goal_received:       { phase: 'Verifying balance', detail: 'checking orchestrator wallet...' },
+      balance_verified:    { phase: 'Planning subtasks', detail: 'decomposing goal...' },
+      subtasks_planned:    { phase: 'Discovering agents', detail: 'querying service registry...' },
+      agent_discovered:    { phase: 'Creating escrow', detail: 'locking funds via Locus checkout...' },
+      escrow_created:      { phase: 'Verifying escrow', detail: 'worker preflight check...' },
+      escrow_verified:     { phase: 'Working', detail: '' },
+      dispatching_task:    { phase: 'Working', detail: '' },
+      research_started:    { phase: 'Researching', detail: 'searching via Exa + Firecrawl...' },
+      exa_search_completed:{ phase: 'Researching', detail: 'Exa search complete, continuing...' },
+      firecrawl_search_completed: { phase: 'Researching', detail: 'Firecrawl complete' },
+      research_completed:  { phase: 'Releasing payment', detail: 'research delivered, paying researcher...' },
+      escrow_released:     { phase: 'Payment released', detail: 'USDC transferred on Base' },
+      synthesis_started:   { phase: 'Synthesizing', detail: 'generating report via LLM...' },
+      synthesis_completed: { phase: 'Releasing payment', detail: 'report delivered, paying writer...' },
+      payment_completed:   { phase: 'Payment confirmed', detail: 'on-chain USDC transfer complete' },
+      goal_completed:      { phase: 'Complete', detail: 'all tasks finished' },
+    };
+
+    function updateStatusBanner(ev) {
+      const cfg = STATUS_MAP[ev.action];
+      if (!cfg) return;
+      const banner = $('statusBanner');
+      banner.classList.add('active');
+      $('statusPhase').textContent = cfg.phase;
+      const detailEl = $('statusDetail');
+      if (ev.action === 'dispatching_task') {
+        detailEl.textContent = ev.task?.includes('Research') ? 'dispatching to researcher...' : 'dispatching to writer...';
+      } else {
+        detailEl.textContent = cfg.detail;
+      }
+      if (ev.action === 'goal_completed') {
+        setTimeout(() => banner.classList.remove('active'), 8000);
+      }
+    }
+
+    // ── Agent Highlighting ──
+    function highlightAgent(ev) {
+      const name = (ev.agent || '').toLowerCase();
+      // Map agent name to card ID
+      let cardId = null;
+      if (name.includes('orch')) cardId = 'c-o';
+      else if (name.includes('res')) cardId = 'c-r';
+      else if (name.includes('wri')) cardId = 'c-w';
+      if (!cardId) return;
+      const card = $(cardId);
+      card.classList.add('active-agent');
+      clearTimeout(card._hlTimeout);
+      card._hlTimeout = setTimeout(() => card.classList.remove('active-agent'), 3000);
     }
 
     function agentCls(name) {
@@ -1625,9 +1809,13 @@
       $('s-sp').textContent = '$0.00';
       $('reportOut').innerHTML = '<div class="empty pulsing">agents are researching and synthesizing...</div>';
 
-      // Show stepper
+      // Show stepper and status banner
       resetStepper();
       $('stepper').classList.add('active');
+      $('statusBanner').classList.add('active');
+      $('statusPhase').textContent = 'Starting';
+      $('statusDetail').textContent = 'submitting goal to orchestrator...';
+      $('toasts').innerHTML = '';
 
       // Animate
       document.querySelectorAll('.acard').forEach(c => c.classList.add('glow'));
@@ -1663,7 +1851,7 @@
         $('s-st').textContent = 'error';
       }
 
-      document.querySelectorAll('.acard').forEach(c => c.classList.remove('glow'));
+      document.querySelectorAll('.acard').forEach(c => { c.classList.remove('glow'); c.classList.remove('active-agent'); });
       document.querySelectorAll('.arr').forEach(a => a.classList.remove('on'));
       $('runBtn').disabled = false;
       $('runBtn').textContent = 'RUN MESH';

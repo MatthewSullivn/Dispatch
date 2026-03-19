@@ -158,7 +158,8 @@ const goalHourWindow = [];
 /** Submit a goal for the mesh to execute. Rate limited and budget-capped. */
 app.post('/api/goal', async (req, res) => {
   const { goal, budget, maxPerTask } = req.body;
-  if (!goal) return res.status(400).json({ error: 'goal is required' });
+  if (!goal || typeof goal !== 'string') return res.status(400).json({ error: 'goal is required' });
+  if (goal.length > SYSTEM.maxGoalLength) return res.status(400).json({ error: `goal must be under ${SYSTEM.maxGoalLength} characters` });
 
   const now = Date.now();
 

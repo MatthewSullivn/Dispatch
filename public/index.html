@@ -1057,7 +1057,7 @@
         <div class="example-chip" onclick="setGoal(this)">Summarize the latest AI agent infrastructure trends</div>
       </div>
       <div class="goal-row">
-        <input type="text" id="goalIn" placeholder="e.g. Research the best agent payment solutions on Ethereum..." />
+        <input type="text" id="goalIn" maxlength="500" placeholder="e.g. Research the best agent payment solutions on Ethereum..." />
         <button class="btn" id="runBtn" onclick="run()">Run Mesh</button>
       </div>
       <div class="opts">
@@ -1179,6 +1179,14 @@
     const $ = id => document.getElementById(id);
     let eventCount = 0;
 
+    /** Escape HTML to prevent XSS from user-supplied goal text or API data. */
+    function esc(str) {
+      if (str == null) return '';
+      const d = document.createElement('div');
+      d.appendChild(document.createTextNode(String(str)));
+      return d.innerHTML;
+    }
+
     function setGoal(el) {
       $('goalIn').value = el.textContent;
       $('goalIn').focus();
@@ -1289,15 +1297,15 @@
       const dcls = detailClass(ev.action, ev.type);
 
       let detail = '';
-      if (ev.amount) detail = `${ev.amount} USDC`;
-      else if (ev.provider) detail = `${ev.provider}/${ev.endpoint}`;
-      else if (ev.query) detail = ev.query?.slice(0, 50);
-      else if (ev.task) detail = ev.task?.slice(0, 50);
-      else if (ev.serviceName) detail = `${ev.serviceName} @ $${ev.price}`;
-      else if (ev.error) detail = ev.error?.slice(0, 80);
-      else if (ev.sessionId) detail = `session:${ev.sessionId?.slice(0, 8)}`;
+      if (ev.amount) detail = `${esc(ev.amount)} USDC`;
+      else if (ev.provider) detail = `${esc(ev.provider)}/${esc(ev.endpoint)}`;
+      else if (ev.query) detail = esc(ev.query?.slice(0, 50));
+      else if (ev.task) detail = esc(ev.task?.slice(0, 50));
+      else if (ev.serviceName) detail = `${esc(ev.serviceName)} @ $${esc(ev.price)}`;
+      else if (ev.error) detail = esc(ev.error?.slice(0, 80));
+      else if (ev.sessionId) detail = `session:${esc(ev.sessionId?.slice(0, 8))}`;
 
-      row.innerHTML = `<span class="tl-icon">${icon}</span><span class="tl-time">${time}</span><span class="tl-agent ${cls}">${ev.agent || 'mesh'}</span><span class="tl-act">${ev.action}</span><span class="tl-det ${dcls}">${detail}</span>`;
+      row.innerHTML = `<span class="tl-icon">${esc(icon)}</span><span class="tl-time">${esc(time)}</span><span class="tl-agent ${cls}">${esc(ev.agent || 'mesh')}</span><span class="tl-act">${esc(ev.action)}</span><span class="tl-det ${dcls}">${detail}</span>`;
       tl.appendChild(row);
       tl.scrollTop = tl.scrollHeight;
     }
@@ -1331,12 +1339,12 @@
         el.innerHTML = d.services.map(s => `
           <div class="svc">
             <div>
-              <div class="svc-name">${s.serviceName}</div>
-              <div class="svc-desc">${s.description.slice(0, 90)}</div>
-              <div class="svc-caps">${s.capabilities.map(c => `<span class="cap-tag">${c}</span>`).join('')}</div>
-              <div class="svc-agent">${s.agentName}</div>
+              <div class="svc-name">${esc(s.serviceName)}</div>
+              <div class="svc-desc">${esc(s.description.slice(0, 90))}</div>
+              <div class="svc-caps">${(s.capabilities || []).map(c => `<span class="cap-tag">${esc(c)}</span>`).join('')}</div>
+              <div class="svc-agent">${esc(s.agentName)}</div>
             </div>
-            <div class="svc-price">$${s.price.toFixed(2)}</div>
+            <div class="svc-price">$${esc(s.price.toFixed(2))}</div>
           </div>
         `).join('');
       } catch {}
@@ -1353,10 +1361,10 @@
         d.approvals.map(a => `
           <div class="appr">
             <div class="appr-header">
-              <span class="appr-agent">${a.agent}</span>
-              <span class="appr-amount">$${a.amount}</span>
+              <span class="appr-agent">${esc(a.agent)}</span>
+              <span class="appr-amount">$${esc(a.amount)}</span>
             </div>
-            <div class="appr-task">${a.task}</div>
+            <div class="appr-task">${esc(a.task)}</div>
             <div style="font-size:10px;color:rgba(255,230,109,0.4);margin-top:8px;font-weight:500;">Held by Locus</div>
           </div>
         `).join('');
@@ -1374,9 +1382,9 @@
         el.innerHTML = d.escrows.map(e => {
           const stCls = e.status.includes('release') ? 'released' : e.status.includes('fail') ? 'failed' : 'pending';
           return `<div class="esc">
-            <span class="esc-status ${stCls}">${e.status}</span>
-            <span style="color:#5a6278">${e.buyerAgent} &rarr; ${e.sellerAgent}</span>
-            <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-weight:700;background:linear-gradient(135deg,#00d4aa,#00e8c0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">$${e.amount}</span>
+            <span class="esc-status ${stCls}">${esc(e.status)}</span>
+            <span style="color:#5a6278">${esc(e.buyerAgent)} &rarr; ${esc(e.sellerAgent)}</span>
+            <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-weight:700;background:linear-gradient(135deg,#00d4aa,#00e8c0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">$${esc(e.amount)}</span>
           </div>`;
         }).join('');
       } catch {}
@@ -1414,13 +1422,13 @@
           const hash = tx.tx_hash ? tx.tx_hash.slice(0, 10) + '...' : '';
           const time = new Date(tx.created_at).toLocaleTimeString('en-US', { hour12: false });
           return `<div class="txn">
-            <span class="txn-agent ${agentCls}">${tx._agent}</span>
-            <span style="color:#2e3348;font-size:10px">${time}</span>
-            <span style="color:#3e4460;font-size:10px">&rarr; ${to}</span>
-            <span class="txn-memo">${memo}</span>
+            <span class="txn-agent ${agentCls}">${esc(tx._agent)}</span>
+            <span style="color:#2e3348;font-size:10px">${esc(time)}</span>
+            <span style="color:#3e4460;font-size:10px">&rarr; ${esc(to)}</span>
+            <span class="txn-memo">${esc(memo)}</span>
             <span class="txn-amount">$${parseFloat(tx.amount_usdc || 0).toFixed(2)}</span>
-            <span class="txn-status ${statusCls}">${tx.status}</span>
-            ${tx.tx_hash ? `<span class="txn-hash"><a href="https://basescan.org/tx/${tx.tx_hash}" target="_blank">${hash}</a></span>` : ''}
+            <span class="txn-status ${statusCls}">${esc(tx.status)}</span>
+            ${tx.tx_hash ? `<span class="txn-hash"><a href="https://basescan.org/tx/${encodeURIComponent(tx.tx_hash)}" target="_blank">${esc(hash)}</a></span>` : ''}
           </div>`;
         }).join('');
       } catch {}
@@ -1437,11 +1445,11 @@
         el.innerHTML = items.map(ev => {
           const cls = agentCls(ev.agent);
           const reasoning = ev.reasoning || ev.goal || ev.task || ev.description || '';
-          const amount = ev.amount ? ` <span style="color:#00d4aa;font-family:\'JetBrains Mono\',monospace;font-weight:700">$${ev.amount} USDC</span>` : '';
+          const amount = ev.amount ? ` <span style="color:#00d4aa;font-family:\'JetBrains Mono\',monospace;font-weight:700">$${esc(ev.amount)} USDC</span>` : '';
           return `<div class="reason-entry">
-            <span class="reason-agent ${cls}">${ev.agent || 'mesh'}</span>
-            <span class="reason-action">${ev.action}</span>
-            <span class="reason-text">${reasoning}${amount}</span>
+            <span class="reason-agent ${cls}">${esc(ev.agent || 'mesh')}</span>
+            <span class="reason-action">${esc(ev.action)}</span>
+            <span class="reason-text">${esc(reasoning)}${amount}</span>
           </div>`;
         }).join('');
       } catch {}

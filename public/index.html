@@ -1055,11 +1055,11 @@
     /* ── Toast Notifications ── */
     .toast-container {
       position: fixed;
-      top: 20px;
+      bottom: 20px;
       right: 20px;
       z-index: 9999;
       display: flex;
-      flex-direction: column;
+      flex-direction: column-reverse;
       gap: 8px;
       pointer-events: none;
       max-width: 380px;
@@ -1611,10 +1611,8 @@
           <div class="toast-msg">${esc(cfg.msg(ev) || '')}</div>
         </div>
         ${amountHtml}`;
-      container.appendChild(toast);
+      container.prepend(toast);
       setTimeout(() => toast.remove(), 5000);
-      // Keep max 4 toasts visible
-      while (container.children.length > 4) container.firstChild.remove();
     }
 
     // ── Status Banner ──

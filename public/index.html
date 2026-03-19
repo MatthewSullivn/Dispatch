@@ -1559,6 +1559,8 @@
     function setStep(n, state) {
       const row = $(`step-${n}`);
       if (!row) return;
+      // Never downgrade a completed step back to active
+      if (state === 'active' && row.classList.contains('done')) return;
       const ind = row.querySelector('.step-indicator');
       row.className = `step-row ${state}`;
       ind.className = `step-indicator ${state}`;

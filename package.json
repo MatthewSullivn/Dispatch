@@ -20,7 +20,7 @@
   "dependencies": {
     "dotenv": "^17.3.1",
     "ethers": "^6.16.0",
-    "express": "^5.2.1",
+    "express": "^4.22.1",
     "uuid": "^13.0.0"
   }
 }

@@ -1,13 +1,16 @@
 const { LocusClient } = require('../locus');
 const { v4: uuidv4 } = require('uuid');
+const meshEvents = require('../event-bus');
 
 class BaseAgent {
-  constructor({ name, role, locusApiKey, walletAddress }) {
+  constructor({ name, role, locusApiKey, walletAddress, onApprovalNeeded }) {
     this.id = uuidv4();
     this.name = name;
     this.role = role;
     this.locus = new LocusClient(locusApiKey);
+    this.locusApiKey = locusApiKey;
     this.walletAddress = walletAddress;
+    this.onApprovalNeeded = onApprovalNeeded || null;
     this.taskLog = [];
   }
 
@@ -20,18 +23,19 @@ class BaseAgent {
       ...details,
     };
     this.taskLog.push(entry);
-    console.log(`[${this.name}] ${action}`, details);
+    meshEvents.emit('agent-event', entry);
+    console.log(`[${this.name}] ${action}`, JSON.stringify(details).slice(0, 200));
     return entry;
   }
 
   async getBalance() {
     const result = await this.locus.getBalance();
-    this.log('balance_check', { balance: result.data });
     return result;
   }
 
   async payAgent(recipientAddress, amount, taskDescription) {
     this.log('payment_initiated', {
+      type: 'payment',
       to: recipientAddress,
       amount,
       task: taskDescription,
@@ -44,39 +48,51 @@ class BaseAgent {
     );
 
     if (result.status === 'pending_approval') {
+      const approvalUrl = result.data?.approval_url || result.data?.data?.approval_url;
       this.log('payment_pending_approval', {
-        approvalUrl: result.data.approval_url,
+        type: 'approval',
+        approvalUrl,
         amount,
+        task: taskDescription,
       });
+
+      if (this.onApprovalNeeded) {
+        this.onApprovalNeeded({
+          agent: this.name,
+          amount,
+          task: taskDescription,
+          approvalUrl,
+          timestamp: new Date().toISOString(),
+        });
+      }
     } else {
-      this.log('payment_completed', { amount, result: result.data });
+      this.log('payment_completed', {
+        type: 'payment',
+        amount,
+        to: recipientAddress,
+        result: result.data?.data || result.data,
+      });
     }
 
     return result;
   }
 
-  async escrowPayment(email, amount, taskDescription, deadline) {
-    this.log('escrow_created', {
-      email,
-      amount,
-      task: taskDescription,
-      deadline,
-    });
-
-    return this.locus.sendEmailEscrow(email, amount, taskDescription, deadline);
-  }
-
   async callAPI(provider, endpoint, params) {
-    this.log('api_call', { provider, endpoint, params });
+    this.log('api_call', { type: 'api', provider, endpoint });
 
     const result = await this.locus.callWrappedAPI(provider, endpoint, params);
     this.log('api_call_completed', {
+      type: 'api',
       provider,
       endpoint,
       success: result.status === 'success',
     });
 
     return result;
+  }
+
+  registerService(registry, serviceDef) {
+    return registry.register(this.name, this.walletAddress, this.locusApiKey, serviceDef);
   }
 
   getAuditTrail() {

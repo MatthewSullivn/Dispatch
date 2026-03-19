@@ -1,11 +1,11 @@
 const BaseAgent = require('./base-agent');
-const ResearchAgent = require('./research-agent');
-const WriterAgent = require('./writer-agent');
 
 class OrchestratorAgent extends BaseAgent {
   constructor(config) {
     super({ ...config, role: 'orchestrator' });
     this.workers = new Map();
+    this.registry = config.registry || null;
+    this.escrowManager = config.escrowManager || null;
     this.budget = { total: 0, spent: 0, perTask: 0 };
     this.tasks = [];
   }
@@ -39,52 +39,87 @@ class OrchestratorAgent extends BaseAgent {
 
     this.log('goal_received', { goal });
 
-    // Step 1: Break goal into subtasks
+    // Step 1: Plan subtasks
     const subtasks = this._planSubtasks(goal);
-    this.log('subtasks_planned', { count: subtasks.length, subtasks });
+    this.log('subtasks_planned', { count: subtasks.length });
 
     const results = {};
-
-    // Step 2: Execute research subtasks
-    const researcher = this.workers.get('researcher');
-    if (!researcher) throw new Error('No research agent registered');
-
     const researchFindings = [];
-    for (const task of subtasks.filter(t => t.type === 'research')) {
+
+    // Step 2: Execute each subtask
+    for (const task of subtasks) {
+      // Check budget
+      if (this.budget.spent + task.payment > this.budget.total) {
+        this.log('budget_exceeded', { spent: this.budget.spent, taskCost: task.payment });
+        task.status = 'skipped_budget';
+        this.tasks.push(task);
+        continue;
+      }
+
+      // Find the right agent (registry or fallback to workers map)
+      const agent = this._findAgent(task.type);
+      if (!agent) {
+        this.log('no_agent_found', { type: task.type });
+        task.status = 'no_agent';
+        this.tasks.push(task);
+        continue;
+      }
+
       this.log('dispatching_task', {
+        type: 'dispatch',
         task: task.description,
-        to: researcher.name,
+        to: agent.name,
         budget: task.payment,
       });
 
-      // Check budget
-      if (this.budget.spent + task.payment > this.budget.total) {
-        this.log('budget_exceeded', {
-          spent: this.budget.spent,
-          taskCost: task.payment,
-          total: this.budget.total,
-        });
-        break;
+      // Try escrow flow first, fallback to direct payment
+      let escrowSession = null;
+      if (this.escrowManager) {
+        try {
+          escrowSession = await this.escrowManager.createEscrow(this.locus, {
+            amount: task.payment,
+            description: task.description,
+            buyerAgent: this.name,
+            sellerAgent: agent.name,
+            webhookUrl: `${process.env.DEPLOYED_URL || 'http://localhost:3000'}/api/webhooks/checkout`,
+            metadata: { goal, taskType: task.type },
+          });
+        } catch (err) {
+          this.log('escrow_fallback', { error: err.message });
+          // Continue without escrow
+        }
       }
 
-      // Execute research
-      const findings = await researcher.research(task.query);
-      researchFindings.push(findings);
-
-      // Pay the research agent via Locus
+      // Execute the task
+      let taskResult;
       try {
-        const payment = await this.payAgent(
-          researcher.walletAddress,
-          task.payment,
-          task.description
-        );
+        if (task.type === 'research') {
+          taskResult = await agent.research(task.query);
+          researchFindings.push(taskResult);
+        } else if (task.type === 'write') {
+          taskResult = await agent.synthesize(researchFindings);
+          results.report = taskResult;
+        }
+      } catch (err) {
+        this.log('task_execution_failed', { error: err.message, task: task.description });
+        task.status = 'execution_failed';
+        task.error = err.message;
+        this.tasks.push(task);
+        continue;
+      }
+
+      // Pay the agent — try escrow release first, then direct payment
+      try {
+        if (escrowSession?.sessionId) {
+          await this.escrowManager.releasePayment(this.locus, escrowSession.sessionId);
+        } else {
+          await this.payAgent(agent.walletAddress, task.payment, task.description);
+        }
         this.budget.spent += task.payment;
         task.status = 'completed';
-        task.paymentResult = payment;
       } catch (err) {
         this.log('payment_failed', { error: err.message, task: task.description });
-        // Mark task as work_done even if payment fails (insufficient balance)
-        task.status = findings.scrapedData || findings.searchResults ? 'work_done_unpaid' : 'payment_failed';
+        task.status = 'work_done_unpaid';
         task.error = err.message;
       }
 
@@ -93,41 +128,7 @@ class OrchestratorAgent extends BaseAgent {
 
     results.research = researchFindings;
 
-    // Step 3: Execute writing subtasks
-    const writer = this.workers.get('writer');
-    if (writer && researchFindings.length > 0) {
-      const writeTask = subtasks.find(t => t.type === 'write');
-      if (writeTask) {
-        this.log('dispatching_task', {
-          task: writeTask.description,
-          to: writer.name,
-          budget: writeTask.payment,
-        });
-
-        const report = await writer.synthesize(researchFindings);
-        results.report = report;
-
-        // Pay the writer agent
-        try {
-          const payment = await this.payAgent(
-            writer.walletAddress,
-            writeTask.payment,
-            writeTask.description
-          );
-          this.budget.spent += writeTask.payment;
-          writeTask.status = 'completed';
-          writeTask.paymentResult = payment;
-        } catch (err) {
-          this.log('payment_failed', { error: err.message });
-          writeTask.status = 'payment_failed';
-          writeTask.error = err.message;
-        }
-
-        this.tasks.push(writeTask);
-      }
-    }
-
-    // Step 4: Generate full audit trail
+    // Generate audit
     const audit = this._generateAudit();
     results.audit = audit;
 
@@ -140,26 +141,59 @@ class OrchestratorAgent extends BaseAgent {
     return results;
   }
 
+  _findAgent(taskType) {
+    // Try registry first
+    if (this.registry) {
+      const capability = taskType === 'research' ? 'research' : 'writing';
+      const services = this.registry.findByCapability(capability);
+      if (services.length > 0) {
+        const service = services[0]; // Cheapest
+        // Find the worker agent with this wallet
+        for (const [, agent] of this.workers) {
+          if (agent.walletAddress === service.walletAddress || agent.name === service.agentName) {
+            this.log('agent_discovered', {
+              type: 'registry',
+              agent: service.agentName,
+              service: service.serviceName,
+              price: service.price,
+            });
+            return agent;
+          }
+        }
+      }
+    }
+
+    // Fallback to direct worker map
+    const roleMap = { research: 'researcher', write: 'writer' };
+    return this.workers.get(roleMap[taskType]);
+  }
+
   _planSubtasks(goal) {
-    // Simple task decomposition — in production this would use an LLM
-    const researchPayment = Math.min(this.budget.perTask, 1.0);
-    const writePayment = Math.min(this.budget.perTask, 1.5);
+    const researchPrice = this._getServicePrice('research') || Math.min(this.budget.perTask, 0.5);
+    const writePrice = this._getServicePrice('writing') || Math.min(this.budget.perTask, 0.5);
 
     return [
       {
         type: 'research',
         description: `Research: ${goal}`,
         query: goal,
-        payment: researchPayment,
+        payment: researchPrice,
         status: 'pending',
       },
       {
         type: 'write',
-        description: `Write report: ${goal}`,
-        payment: writePayment,
+        description: `Synthesize report: ${goal}`,
+        payment: writePrice,
         status: 'pending',
       },
     ];
+  }
+
+  _getServicePrice(capability) {
+    if (!this.registry) return null;
+    const services = this.registry.findByCapability(capability);
+    if (services.length > 0) return services[0].price;
+    return null;
   }
 
   _generateAudit() {
@@ -176,7 +210,7 @@ class OrchestratorAgent extends BaseAgent {
       summary: {
         totalTasks: this.tasks.length,
         completed: this.tasks.filter(t => t.status === 'completed').length,
-        failed: this.tasks.filter(t => t.status === 'payment_failed').length,
+        failed: this.tasks.filter(t => t.status.includes('failed') || t.status === 'work_done_unpaid').length,
         totalSpent: this.budget.spent,
         remainingBudget: this.budget.total - this.budget.spent,
       },

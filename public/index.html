@@ -3,381 +3,352 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent Mesh — Locus Payment Network</title>
+  <title>Agent Mesh — Autonomous Agent Marketplace</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      background: #0a0a0f;
-      color: #c8c8d0;
-      min-height: 100vh;
-    }
-    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #0a0a0f; color: #c8c8d0; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
-    header {
-      display: flex;
-      align-items: baseline;
-      gap: 16px;
-      padding-bottom: 20px;
-      margin-bottom: 24px;
-      border-bottom: 1px solid #1a1a2e;
-    }
-    header h1 { font-size: 22px; color: #00d4aa; font-weight: 500; }
-    header .tag {
-      font-size: 11px;
-      color: #0a0a0f;
-      background: #00d4aa;
-      padding: 2px 8px;
-      border-radius: 3px;
-      font-weight: 600;
-    }
-    header .sub { font-size: 12px; color: #555; margin-left: auto; }
+    header { display: flex; align-items: baseline; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid #1a1a2e; margin-bottom: 20px; }
+    header h1 { font-size: 20px; color: #00d4aa; font-weight: 500; }
+    .badge { font-size: 10px; background: #00d4aa; color: #0a0a0f; padding: 2px 6px; border-radius: 3px; font-weight: 700; }
+    .badge.base { background: #0052ff; color: #fff; }
+    header .sub { font-size: 11px; color: #444; margin-left: auto; }
 
-    /* Agent Network Visualization */
-    .network {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0;
-      margin-bottom: 28px;
-      padding: 24px 0;
-    }
-    .agent-card {
-      background: #111118;
-      border: 1px solid #1a1a2e;
-      border-radius: 8px;
-      padding: 16px 20px;
-      min-width: 200px;
-      text-align: center;
-      position: relative;
-    }
-    .agent-card.active { border-color: #00d4aa33; box-shadow: 0 0 20px #00d4aa11; }
-    .agent-card .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 6px;
-      vertical-align: middle;
-    }
-    .dot-orch { background: #ff6b6b; box-shadow: 0 0 6px #ff6b6b55; }
-    .dot-res { background: #4ecdc4; box-shadow: 0 0 6px #4ecdc455; }
-    .dot-wri { background: #ffe66d; box-shadow: 0 0 6px #ffe66d55; }
-    .agent-card .name { font-size: 13px; font-weight: 600; color: #e0e0e0; }
-    .agent-card .role { font-size: 11px; color: #666; margin-top: 4px; }
-    .agent-card .bal { font-size: 13px; color: #00d4aa; margin-top: 8px; font-weight: 500; }
-    .agent-card .wallet {
-      font-size: 9px; color: #444; margin-top: 6px;
-      word-break: break-all;
-    }
-    .agent-card .wallet a { color: #444; text-decoration: none; }
-    .agent-card .wallet a:hover { color: #00d4aa; }
-    .arrow {
-      font-size: 20px;
-      color: #333;
-      padding: 0 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
-    .arrow .label { font-size: 9px; color: #555; }
-    .arrow.active { color: #00d4aa; }
-    .arrow.active .label { color: #00d4aa; }
+    /* Agent Network */
+    .network { display: flex; align-items: center; justify-content: center; gap: 0; margin: 20px 0; }
+    .acard { background: #111118; border: 1px solid #1a1a2e; border-radius: 8px; padding: 14px 18px; min-width: 180px; text-align: center; transition: border-color 0.3s, box-shadow 0.3s; }
+    .acard.glow { border-color: #00d4aa44; box-shadow: 0 0 16px #00d4aa15; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
+    .dot-o { background: #ff6b6b; } .dot-r { background: #4ecdc4; } .dot-w { background: #ffe66d; }
+    .acard .nm { font-size: 12px; font-weight: 600; color: #ddd; }
+    .acard .rl { font-size: 10px; color: #555; margin-top: 3px; }
+    .acard .bl { font-size: 12px; color: #00d4aa; margin-top: 6px; font-weight: 500; }
+    .acard .wa { font-size: 8px; color: #333; margin-top: 4px; word-break: break-all; }
+    .acard .wa a { color: #333; text-decoration: none; } .acard .wa a:hover { color: #00d4aa; }
+    .arr { font-size: 18px; color: #222; padding: 0 10px; text-align: center; transition: color 0.3s; }
+    .arr .lb { font-size: 8px; color: #333; display: block; }
+    .arr.on { color: #00d4aa; } .arr.on .lb { color: #00d4aa; }
 
-    /* Goal Input */
-    .input-section { margin-bottom: 24px; }
-    .goal-row {
-      display: flex;
-      gap: 10px;
-    }
-    .goal-row input {
-      flex: 1;
-      background: #111118;
-      border: 1px solid #1a1a2e;
-      border-radius: 6px;
-      padding: 12px 16px;
-      color: #e0e0e0;
-      font-family: inherit;
-      font-size: 13px;
-      outline: none;
-    }
-    .goal-row input:focus { border-color: #00d4aa44; }
-    .goal-row input::placeholder { color: #444; }
-    .goal-row button {
-      background: #00d4aa;
-      color: #0a0a0f;
-      border: none;
-      border-radius: 6px;
-      padding: 12px 20px;
-      font-family: inherit;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 13px;
-      white-space: nowrap;
-    }
-    .goal-row button:hover { background: #00eebb; }
-    .goal-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* Input */
+    .input-area { margin: 20px 0; }
+    .goal-row { display: flex; gap: 8px; }
+    .goal-row input { flex: 1; background: #111118; border: 1px solid #1a1a2e; border-radius: 6px; padding: 11px 14px; color: #ddd; font-family: inherit; font-size: 13px; outline: none; }
+    .goal-row input:focus { border-color: #00d4aa33; }
+    .goal-row input::placeholder { color: #333; }
+    .btn { background: #00d4aa; color: #0a0a0f; border: none; border-radius: 6px; padding: 11px 18px; font-family: inherit; font-weight: 600; cursor: pointer; font-size: 12px; }
+    .btn:hover { background: #00eebb; } .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .opts { display: flex; gap: 14px; margin-top: 8px; align-items: center; font-size: 11px; color: #555; }
+    .opts input { width: 60px; background: #111118; border: 1px solid #1a1a2e; border-radius: 4px; padding: 4px 6px; color: #ddd; font-family: inherit; font-size: 11px; outline: none; }
 
-    .budget-row {
-      display: flex;
-      gap: 16px;
-      margin-top: 10px;
-      align-items: center;
-    }
-    .budget-row label { font-size: 11px; color: #555; }
-    .budget-row input {
-      width: 70px;
-      background: #111118;
-      border: 1px solid #1a1a2e;
-      border-radius: 4px;
-      padding: 5px 8px;
-      color: #e0e0e0;
-      font-family: inherit;
-      font-size: 12px;
-      outline: none;
-    }
+    /* Status */
+    .stats { display: flex; gap: 20px; padding: 8px 14px; background: #111118; border: 1px solid #1a1a2e; border-radius: 6px; margin: 16px 0; font-size: 11px; }
+    .st { display: flex; gap: 5px; } .st-l { color: #444; } .st-v { color: #00d4aa; font-weight: 600; } .st-v.r { color: #ff6b6b; }
 
-    /* Status Bar */
-    .status-bar {
-      display: flex;
-      gap: 24px;
-      padding: 10px 16px;
-      background: #111118;
-      border: 1px solid #1a1a2e;
-      border-radius: 6px;
-      margin-bottom: 20px;
-      font-size: 12px;
-    }
-    .stat { display: flex; gap: 6px; }
-    .stat-label { color: #555; }
-    .stat-val { color: #00d4aa; font-weight: 600; }
-    .stat-val.warn { color: #ff6b6b; }
-
-    /* Main Grid */
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    /* Grid */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
-
-    .panel {
-      background: #111118;
-      border: 1px solid #1a1a2e;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .panel-head {
-      padding: 10px 16px;
-      font-size: 11px;
-      color: #00d4aa;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      border-bottom: 1px solid #1a1a2e;
-      font-weight: 600;
-    }
-    .panel-body {
-      padding: 12px 16px;
-      max-height: 420px;
-      overflow-y: auto;
-      font-size: 12px;
-      line-height: 1.7;
-    }
-    .panel-body::-webkit-scrollbar { width: 4px; }
-    .panel-body::-webkit-scrollbar-thumb { background: #1a1a2e; border-radius: 2px; }
     .full { grid-column: 1 / -1; }
 
-    /* Flow Log */
-    .log-entry {
-      padding: 3px 0;
-      display: flex;
-      gap: 8px;
-      align-items: baseline;
-    }
-    .log-time { color: #333; font-size: 10px; min-width: 70px; }
-    .log-agent {
-      font-size: 11px;
-      font-weight: 600;
-      min-width: 100px;
-    }
-    .log-agent.orch { color: #ff6b6b; }
-    .log-agent.res { color: #4ecdc4; }
-    .log-agent.wri { color: #ffe66d; }
-    .log-agent.mesh { color: #00d4aa; }
-    .log-action { color: #888; }
-    .log-detail { color: #aaa; }
-    .log-payment { color: #00d4aa; font-weight: 600; }
-    .log-error { color: #ff6b6b; }
-    .log-api { color: #a78bfa; }
+    .panel { background: #111118; border: 1px solid #1a1a2e; border-radius: 8px; overflow: hidden; }
+    .ph { padding: 8px 14px; font-size: 10px; color: #00d4aa; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #1a1a2e; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .ph .count { background: #1a1a2e; color: #888; padding: 1px 6px; border-radius: 8px; font-size: 9px; }
+    .pb { padding: 10px 14px; max-height: 360px; overflow-y: auto; font-size: 11px; line-height: 1.7; }
+    .pb::-webkit-scrollbar { width: 3px; } .pb::-webkit-scrollbar-thumb { background: #1a1a2e; }
+
+    .empty { color: #222; font-style: italic; text-align: center; padding: 16px 0; }
+
+    /* Service cards */
+    .svc { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #0d0d14; border-radius: 5px; margin-bottom: 6px; }
+    .svc .svc-name { font-size: 12px; font-weight: 600; color: #ddd; }
+    .svc .svc-desc { font-size: 10px; color: #555; }
+    .svc .svc-price { margin-left: auto; color: #00d4aa; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .svc .svc-agent { font-size: 9px; color: #444; }
+
+    /* Approval cards */
+    .appr { padding: 10px 12px; background: #1a1208; border: 1px solid #332a10; border-radius: 6px; margin-bottom: 6px; }
+    .appr .appr-header { display: flex; justify-content: space-between; align-items: center; }
+    .appr .appr-agent { font-size: 11px; color: #ffe66d; font-weight: 600; }
+    .appr .appr-amount { font-size: 13px; color: #ffe66d; font-weight: 700; }
+    .appr .appr-task { font-size: 10px; color: #888; margin-top: 4px; }
+    .appr-btn { background: #ffe66d; color: #0a0a0f; border: none; border-radius: 4px; padding: 4px 10px; font-family: inherit; font-size: 10px; font-weight: 600; cursor: pointer; margin-top: 6px; }
+    .appr-btn:hover { background: #fff59d; }
+
+    /* Escrow cards */
+    .esc { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #0d0d14; border-radius: 5px; margin-bottom: 4px; font-size: 10px; }
+    .esc-status { padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; }
+    .esc-status.pending { background: #332a10; color: #ffe66d; }
+    .esc-status.released { background: #0a2e1a; color: #00d4aa; }
+    .esc-status.failed { background: #2e0a0a; color: #ff6b6b; }
+
+    /* Timeline */
+    .tl-entry { display: flex; gap: 6px; padding: 3px 0; align-items: baseline; font-size: 11px; }
+    .tl-time { color: #2a2a2a; font-size: 9px; min-width: 65px; }
+    .tl-agent { font-weight: 600; min-width: 90px; font-size: 10px; }
+    .tl-agent.o { color: #ff6b6b; } .tl-agent.r { color: #4ecdc4; } .tl-agent.w { color: #ffe66d; } .tl-agent.m { color: #00d4aa; } .tl-agent.l { color: #a78bfa; }
+    .tl-act { color: #666; }
+    .tl-det { color: #888; }
+    .tl-det.pay { color: #00d4aa; font-weight: 600; }
+    .tl-det.err { color: #ff6b6b; }
+    .tl-det.api { color: #a78bfa; }
+    .tl-det.esc { color: #4ecdc4; }
+    .tl-icon { font-size: 10px; min-width: 14px; }
 
     /* Report */
-    .report {
-      white-space: pre-wrap;
-      font-size: 12px;
-      line-height: 1.6;
-      color: #c8c8d0;
-    }
+    .report { white-space: pre-wrap; font-size: 11px; line-height: 1.6; color: #bbb; }
 
-    .empty-state {
-      color: #333;
-      font-style: italic;
-      padding: 20px 0;
-      text-align: center;
-    }
-
-    /* Payment flow animation */
     @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
     .pulsing { animation: pulse 1.5s ease-in-out infinite; }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="wrap">
     <header>
       <h1>agent_mesh</h1>
-      <span class="tag">LOCUS</span>
-      <span class="sub">autonomous agent payments on Base</span>
+      <span class="badge">LOCUS</span>
+      <span class="badge base">BASE</span>
+      <span class="sub">autonomous agent marketplace</span>
     </header>
 
-    <!-- Agent Network -->
     <div class="network">
-      <div class="agent-card" id="card-orch">
-        <div><span class="dot dot-orch"></span><span class="name">Orchestrator</span></div>
-        <div class="role">plans &amp; pays</div>
-        <div class="bal" id="bal-orch">—</div>
-        <div class="wallet"><a id="link-orch" href="#" target="_blank"></a></div>
+      <div class="acard" id="c-o">
+        <div><span class="dot dot-o"></span><span class="nm">Orchestrator</span></div>
+        <div class="rl">coordinates + pays</div>
+        <div class="bl" id="b-o">—</div>
+        <div class="wa"><a id="l-o" href="#" target="_blank"></a></div>
       </div>
-      <div class="arrow" id="arrow1">
-        <span>→</span>
-        <span class="label">USDC</span>
+      <div class="arr" id="a1"><span>→</span><span class="lb">USDC</span></div>
+      <div class="acard" id="c-r">
+        <div><span class="dot dot-r"></span><span class="nm">Researcher</span></div>
+        <div class="rl">search + scrape</div>
+        <div class="bl" id="b-r">—</div>
+        <div class="wa"><a id="l-r" href="#" target="_blank"></a></div>
       </div>
-      <div class="agent-card" id="card-res">
-        <div><span class="dot dot-res"></span><span class="name">Researcher</span></div>
-        <div class="role">search &amp; scrape</div>
-        <div class="bal" id="bal-res">—</div>
-        <div class="wallet"><a id="link-res" href="#" target="_blank"></a></div>
-      </div>
-      <div class="arrow" id="arrow2">
-        <span>→</span>
-        <span class="label">USDC</span>
-      </div>
-      <div class="agent-card" id="card-wri">
-        <div><span class="dot dot-wri"></span><span class="name">Writer</span></div>
-        <div class="role">synthesize</div>
-        <div class="bal" id="bal-wri">—</div>
-        <div class="wallet"><a id="link-wri" href="#" target="_blank"></a></div>
+      <div class="arr" id="a2"><span>→</span><span class="lb">USDC</span></div>
+      <div class="acard" id="c-w">
+        <div><span class="dot dot-w"></span><span class="nm">Writer</span></div>
+        <div class="rl">synthesize</div>
+        <div class="bl" id="b-w">—</div>
+        <div class="wa"><a id="l-w" href="#" target="_blank"></a></div>
       </div>
     </div>
 
-    <!-- Input -->
-    <div class="input-section">
+    <div class="input-area">
       <div class="goal-row">
-        <input type="text" id="goalInput" placeholder="Give the mesh a goal..." />
-        <button id="execBtn" onclick="run()">Run Mesh</button>
+        <input type="text" id="goalIn" placeholder="Give the agent mesh a goal..." />
+        <button class="btn" id="runBtn" onclick="run()">Run</button>
       </div>
-      <div class="budget-row">
-        <div><label>Budget</label> <input type="number" id="budgetIn" value="2" min="0.1" step="0.5" /> <label>USDC</label></div>
-        <div><label>Max/task</label> <input type="number" id="taskIn" value="0.5" min="0.05" step="0.1" /> <label>USDC</label></div>
+      <div class="opts">
+        <span>Budget <input type="number" id="budIn" value="1.5" min="0.1" step="0.25" /> USDC</span>
+        <span>Max/task <input type="number" id="taskIn" value="0.5" min="0.05" step="0.1" /> USDC</span>
       </div>
     </div>
 
-    <!-- Status -->
-    <div class="status-bar">
-      <div class="stat"><span class="stat-label">status</span> <span class="stat-val" id="st-status">idle</span></div>
-      <div class="stat"><span class="stat-label">budget</span> <span class="stat-val" id="st-budget">—</span></div>
-      <div class="stat"><span class="stat-label">spent</span> <span class="stat-val warn" id="st-spent">$0.00</span></div>
-      <div class="stat"><span class="stat-label">tasks</span> <span class="stat-val" id="st-tasks">0</span></div>
-      <div class="stat"><span class="stat-label">payments</span> <span class="stat-val" id="st-payments">0</span></div>
+    <div class="stats">
+      <div class="st"><span class="st-l">status</span><span class="st-v" id="s-st">idle</span></div>
+      <div class="st"><span class="st-l">budget</span><span class="st-v" id="s-bud">—</span></div>
+      <div class="st"><span class="st-l">spent</span><span class="st-v r" id="s-sp">$0.00</span></div>
+      <div class="st"><span class="st-l">tasks</span><span class="st-v" id="s-tk">0</span></div>
+      <div class="st"><span class="st-l">escrows</span><span class="st-v" id="s-es">0</span></div>
     </div>
 
-    <!-- Panels -->
     <div class="grid">
+      <!-- Marketplace -->
       <div class="panel">
-        <div class="panel-head">Payment Flow</div>
-        <div class="panel-body" id="flowLog">
-          <div class="empty-state">waiting for goal...</div>
-        </div>
+        <div class="ph">Marketplace <span class="count" id="svc-count">0</span></div>
+        <div class="pb" id="svcList"><div class="empty">loading services...</div></div>
       </div>
+
+      <!-- Approvals -->
       <div class="panel">
-        <div class="panel-head">Audit Trail</div>
-        <div class="panel-body" id="auditLog">
-          <div class="empty-state">no activity yet</div>
-        </div>
+        <div class="ph">Approvals <span class="count" id="apr-count">0</span></div>
+        <div class="pb" id="aprList"><div class="empty">no approvals pending</div></div>
       </div>
+
+      <!-- Live Timeline -->
       <div class="panel full">
-        <div class="panel-head">Report Output</div>
-        <div class="panel-body">
-          <div class="report" id="reportOut">
-            <div class="empty-state">submit a goal to see results</div>
-          </div>
-        </div>
+        <div class="ph">Live Timeline <span class="count" id="tl-count">0</span></div>
+        <div class="pb" id="timeline"><div class="empty">waiting for activity...</div></div>
+      </div>
+
+      <!-- Escrows -->
+      <div class="panel">
+        <div class="ph">Escrow Sessions <span class="count" id="esc-count">0</span></div>
+        <div class="pb" id="escList"><div class="empty">no escrows yet</div></div>
+      </div>
+
+      <!-- Report -->
+      <div class="panel">
+        <div class="ph">Report Output</div>
+        <div class="pb"><div class="report" id="reportOut"><div class="empty">submit a goal to see results</div></div></div>
       </div>
     </div>
   </div>
 
   <script>
     const $ = id => document.getElementById(id);
+    let eventCount = 0;
+
+    // SSE connection
+    const sse = new EventSource('/api/events/stream');
+    sse.onmessage = (e) => {
+      try {
+        const ev = JSON.parse(e.data);
+        if (ev.action === 'connected') return;
+        addTimelineEntry(ev);
+        // Refresh panels on key events
+        if (ev.type === 'escrow') loadEscrows();
+        if (ev.type === 'approval') loadApprovals();
+        if (ev.action?.includes('payment')) loadBalances();
+      } catch {}
+    };
+
+    function agentCls(name) {
+      if (!name) return 'm';
+      const n = name.toLowerCase();
+      if (n.includes('orch')) return 'o';
+      if (n.includes('res')) return 'r';
+      if (n.includes('wri')) return 'w';
+      if (n.includes('locus')) return 'l';
+      return 'm';
+    }
+
+    function eventIcon(action, type) {
+      if (type === 'payment' || action?.includes('payment')) return '$';
+      if (type === 'escrow' || action?.includes('escrow')) return '~';
+      if (type === 'approval' || action?.includes('approval')) return '!';
+      if (type === 'api' || action?.includes('api')) return '>';
+      if (type === 'registry' || action?.includes('register')) return '+';
+      if (action?.includes('goal')) return '*';
+      if (action?.includes('dispatch')) return '^';
+      return '.';
+    }
+
+    function detailClass(action, type) {
+      if (action?.includes('payment') || action?.includes('released')) return 'pay';
+      if (action?.includes('failed') || action?.includes('error')) return 'err';
+      if (type === 'api' || action?.includes('api')) return 'api';
+      if (type === 'escrow') return 'esc';
+      return '';
+    }
+
+    function addTimelineEntry(ev) {
+      const tl = $('timeline');
+      if (tl.querySelector('.empty')) tl.innerHTML = '';
+      eventCount++;
+      $('tl-count').textContent = eventCount;
+
+      const row = document.createElement('div');
+      row.className = 'tl-entry';
+      const time = new Date(ev.timestamp).toLocaleTimeString('en-US', { hour12: false });
+      const cls = agentCls(ev.agent);
+      const icon = eventIcon(ev.action, ev.type);
+      const dcls = detailClass(ev.action, ev.type);
+
+      let detail = '';
+      if (ev.amount) detail = `${ev.amount} USDC`;
+      else if (ev.provider) detail = `${ev.provider}/${ev.endpoint}`;
+      else if (ev.query) detail = ev.query?.slice(0, 40);
+      else if (ev.task) detail = ev.task?.slice(0, 40);
+      else if (ev.serviceName) detail = `${ev.serviceName} @ $${ev.price}`;
+      else if (ev.error) detail = ev.error?.slice(0, 60);
+      else if (ev.sessionId) detail = `session:${ev.sessionId?.slice(0, 8)}`;
+
+      row.innerHTML = `<span class="tl-icon">${icon}</span><span class="tl-time">${time}</span><span class="tl-agent ${cls}">${ev.agent || 'mesh'}</span><span class="tl-act">${ev.action}</span><span class="tl-det ${dcls}">${detail}</span>`;
+      tl.appendChild(row);
+      tl.scrollTop = tl.scrollHeight;
+    }
 
     async function loadBalances() {
       try {
         const r = await fetch('/api/balances');
         const d = await r.json();
+        const map = { orchestrator: ['o'], researcher: ['r'], writer: ['w'] };
         for (const [key, info] of Object.entries(d.balances)) {
-          const bal = info?.usdc_balance ?? info?.data?.usdc_balance ?? '?';
-          const addr = info?.wallet_address ?? info?.data?.wallet_address ?? '';
-          const shortAddr = addr ? addr.slice(0, 6) + '...' + addr.slice(-4) : '';
-          const map = { orchestrator: 'orch', researcher: 'res', writer: 'wri' };
-          const id = map[key];
-          if (id) {
-            $(`bal-${id}`).textContent = `${parseFloat(bal).toFixed(2)} USDC`;
-            const link = $(`link-${id}`);
-            link.textContent = shortAddr;
+          const bal = info?.usdc_balance ?? '?';
+          const addr = info?.wallet_address ?? '';
+          const ids = map[key];
+          if (ids) {
+            $(`b-${ids[0]}`).textContent = `${parseFloat(bal).toFixed(2)} USDC`;
+            const link = $(`l-${ids[0]}`);
+            link.textContent = addr ? addr.slice(0, 6) + '...' + addr.slice(-4) : '';
             link.href = `https://basescan.org/address/${addr}`;
           }
         }
-      } catch (e) { console.error(e); }
+      } catch {}
     }
 
-    function agentClass(name) {
-      if (!name) return 'mesh';
-      const n = name.toLowerCase();
-      if (n.includes('orch')) return 'orch';
-      if (n.includes('res')) return 'res';
-      if (n.includes('wri')) return 'wri';
-      return 'mesh';
+    async function loadServices() {
+      try {
+        const r = await fetch('/api/registry');
+        const d = await r.json();
+        const el = $('svcList');
+        $('svc-count').textContent = d.services.length;
+        if (d.services.length === 0) { el.innerHTML = '<div class="empty">no services</div>'; return; }
+        el.innerHTML = d.services.map(s => `
+          <div class="svc">
+            <div>
+              <div class="svc-name">${s.serviceName}</div>
+              <div class="svc-desc">${s.description.slice(0, 80)}</div>
+              <div class="svc-agent">${s.agentName} | ${s.capabilities.join(', ')}</div>
+            </div>
+            <div class="svc-price">$${s.price.toFixed(2)}</div>
+          </div>
+        `).join('');
+      } catch {}
     }
 
-    function addLog(container, agent, action, detail, isPayment, isError, isApi) {
-      const el = container;
-      if (el.querySelector('.empty-state')) el.innerHTML = '';
-      const row = document.createElement('div');
-      row.className = 'log-entry';
-      const cls = agentClass(agent);
-      let detailCls = 'log-detail';
-      if (isPayment) detailCls = 'log-payment';
-      if (isError) detailCls = 'log-error';
-      if (isApi) detailCls = 'log-api';
-      const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-      row.innerHTML = `<span class="log-time">${time}</span><span class="log-agent ${cls}">${agent || 'mesh'}</span><span class="log-action">${action}</span>${detail ? `<span class="${detailCls}">${detail}</span>` : ''}`;
-      el.appendChild(row);
-      el.scrollTop = el.scrollHeight;
+    async function loadApprovals() {
+      try {
+        const r = await fetch('/api/approvals');
+        const d = await r.json();
+        const el = $('aprList');
+        $('apr-count').textContent = d.approvals.length;
+        if (d.approvals.length === 0) { el.innerHTML = '<div class="empty">no approvals pending</div>'; return; }
+        el.innerHTML = d.approvals.map(a => `
+          <div class="appr">
+            <div class="appr-header">
+              <span class="appr-agent">${a.agent}</span>
+              <span class="appr-amount">$${a.amount}</span>
+            </div>
+            <div class="appr-task">${a.task}</div>
+            ${a.approvalUrl ? `<button class="appr-btn" onclick="window.open('${a.approvalUrl}','_blank')">Approve</button>` : ''}
+          </div>
+        `).join('');
+      } catch {}
+    }
+
+    async function loadEscrows() {
+      try {
+        const r = await fetch('/api/escrows');
+        const d = await r.json();
+        const el = $('escList');
+        $('esc-count').textContent = d.escrows.length;
+        $('s-es').textContent = d.escrows.length;
+        if (d.escrows.length === 0) { el.innerHTML = '<div class="empty">no escrows yet</div>'; return; }
+        el.innerHTML = d.escrows.map(e => {
+          const stCls = e.status.includes('release') ? 'released' : e.status.includes('fail') ? 'failed' : 'pending';
+          return `<div class="esc">
+            <span class="esc-status ${stCls}">${e.status}</span>
+            <span>${e.buyerAgent} → ${e.sellerAgent}</span>
+            <span style="margin-left:auto;color:#00d4aa">$${e.amount}</span>
+          </div>`;
+        }).join('');
+      } catch {}
     }
 
     async function run() {
-      const goal = $('goalInput').value.trim();
+      const goal = $('goalIn').value.trim();
       if (!goal) return;
-      const budget = parseFloat($('budgetIn').value) || 2;
+      const budget = parseFloat($('budIn').value) || 1.5;
       const maxPerTask = parseFloat($('taskIn').value) || 0.5;
 
-      $('execBtn').disabled = true;
-      $('execBtn').textContent = 'Running...';
-      $('st-status').textContent = 'executing';
-      $('st-budget').textContent = `$${budget.toFixed(2)}`;
-      $('st-spent').textContent = '$0.00';
-      $('flowLog').innerHTML = '';
-      $('auditLog').innerHTML = '';
-      $('reportOut').innerHTML = '<div class="empty-state pulsing">agents working...</div>';
-
-      addLog($('flowLog'), 'mesh', 'goal →', goal.slice(0, 60), false, false, false);
-
-      // Animate arrows
-      $('arrow1').classList.add('active');
-      $('card-orch').classList.add('active');
+      $('runBtn').disabled = true;
+      $('runBtn').textContent = '...';
+      $('s-st').textContent = 'running';
+      $('s-bud').textContent = `$${budget.toFixed(2)}`;
+      $('s-sp').textContent = '$0.00';
+      $('reportOut').innerHTML = '<div class="empty pulsing">agents working...</div>';
 
       try {
         const r = await fetch('/api/goal', {
@@ -387,90 +358,42 @@
         });
         const data = await r.json();
 
-        $('arrow1').classList.remove('active');
-        $('card-orch').classList.remove('active');
-
-        if (data.success && data.audit) {
-          // Collect all logs
-          const logs = [];
-          const addLogs = (trail) => {
-            if (trail?.log) logs.push(...trail.log);
-          };
-          addLogs(data.audit.orchestrator);
-          if (data.audit.workers) {
-            Object.values(data.audit.workers).forEach(addLogs);
-          }
-          logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-          $('flowLog').innerHTML = '';
-          $('auditLog').innerHTML = '';
-
-          let paymentCount = 0;
-          for (const entry of logs) {
-            const agent = entry.agent || 'mesh';
-            const action = entry.action;
-            let detail = '';
-            let isPay = false, isErr = false, isApi = false;
-
-            if (action.includes('payment') && entry.amount) {
-              detail = `${entry.amount} USDC`;
-              isPay = true;
-              if (action === 'payment_completed') paymentCount++;
-            }
-            if (action.includes('failed')) isErr = true;
-            if (action === 'api_call') { detail = `${entry.provider}/${entry.endpoint}`; isApi = true; }
-            if (entry.query) detail = entry.query.slice(0, 50);
-            if (entry.task) detail = entry.task.slice(0, 50);
-            if (entry.error && !detail) detail = entry.error.slice(0, 80);
-
-            // Payment-related goes to flow, everything to audit
-            if (action.includes('payment') || action.includes('budget') || action.includes('dispatch') || action.includes('goal') || action.includes('subtask')) {
-              addLog($('flowLog'), agent, action, detail, isPay, isErr, isApi);
-            }
-            addLog($('auditLog'), agent, action, detail, isPay, isErr, isApi);
-          }
-
-          // Status
-          const s = data.audit.summary;
+        if (data.success) {
+          const s = data.audit?.summary;
           if (s) {
-            $('st-spent').textContent = `$${(s.totalSpent || 0).toFixed(2)}`;
-            $('st-tasks').textContent = s.completed || 0;
-            $('st-payments').textContent = paymentCount;
+            $('s-sp').textContent = `$${(s.totalSpent || 0).toFixed(2)}`;
+            $('s-tk').textContent = s.completed || 0;
           }
-
-          // Report
-          const report = data.report?.report || 'No report generated.';
-          // Try to parse if it's JSON (from Grok)
-          let displayReport = report;
+          let report = data.report?.report || 'No report generated.';
           try {
-            const parsed = JSON.parse(report);
-            displayReport = parsed?.data?.choices?.[0]?.message?.content
-              || parsed?.choices?.[0]?.message?.content
-              || JSON.stringify(parsed, null, 2);
-          } catch (e) {}
-          $('reportOut').textContent = displayReport;
-
-          $('st-status').textContent = 'completed';
+            const p = JSON.parse(report);
+            report = p?.data?.choices?.[0]?.message?.content || p?.choices?.[0]?.message?.content || report;
+          } catch {}
+          $('reportOut').textContent = report;
+          $('s-st').textContent = 'done';
         } else {
-          addLog($('flowLog'), 'mesh', 'error', data.error || 'Unknown error', false, true, false);
-          $('st-status').textContent = 'error';
-          $('reportOut').textContent = data.error || 'Execution failed';
+          $('reportOut').textContent = data.error || 'Failed';
+          $('s-st').textContent = 'error';
         }
       } catch (err) {
-        addLog($('flowLog'), 'mesh', 'error', err.message, false, true, false);
-        $('st-status').textContent = 'error';
         $('reportOut').textContent = err.message;
+        $('s-st').textContent = 'error';
       }
 
-      $('execBtn').disabled = false;
-      $('execBtn').textContent = 'Run Mesh';
+      $('runBtn').disabled = false;
+      $('runBtn').textContent = 'Run';
       loadBalances();
+      loadEscrows();
+      loadApprovals();
     }
 
-    // Enter to submit
-    $('goalInput').addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+    $('goalIn').addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
 
+    // Initial load
     loadBalances();
+    loadServices();
+    loadApprovals();
+    loadEscrows();
     setInterval(loadBalances, 30000);
   </script>
 </body>

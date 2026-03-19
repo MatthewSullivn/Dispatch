@@ -54,7 +54,10 @@ class OrchestratorAgent extends BaseAgent {
 
     // Step 1: Plan subtasks
     const subtasks = this._planSubtasks(goal);
-    this.log('subtasks_planned', { count: subtasks.length });
+    this.log('subtasks_planned', {
+      count: subtasks.length,
+      reasoning: `Decomposed goal into ${subtasks.length} subtasks: ${subtasks.map(t => t.type).join(', ')}. Total estimated cost: $${subtasks.reduce((s, t) => s + t.payment, 0).toFixed(2)} USDC.`,
+    });
 
     const results = {};
     const researchFindings = [];
@@ -83,6 +86,7 @@ class OrchestratorAgent extends BaseAgent {
         task: task.description,
         to: agent.name,
         budget: task.payment,
+        reasoning: `Dispatching "${task.type}" to ${agent.name}. Budget allocation: $${task.payment} of $${(this.budget.total - this.budget.spent).toFixed(2)} remaining.`,
       });
 
       // Step A: Create escrow (checkout session) before work starts
@@ -173,6 +177,7 @@ class OrchestratorAgent extends BaseAgent {
               agent: service.agentName,
               service: service.serviceName,
               price: service.price,
+              reasoning: `Selected ${service.agentName} from registry — cheapest provider for "${capability}" at $${service.price} USDC/task.`,
             });
             return agent;
           }

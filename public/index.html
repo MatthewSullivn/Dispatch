@@ -1001,11 +1001,15 @@
       } catch {}
     }
 
-    const WALLET_NAMES = {
-      '0x148624ec93458da3069e1d4c12d18971cf483ce0': 'Orchestrator',
-      '0xb16ea58f59e9fba450864fa0f9004970dcc019a9': 'Researcher',
-      '0x00ab3647c57ca26c4391171c483ba79069650aa8': 'Writer',
-    };
+    // Wallet-to-name mapping, populated dynamically from /api/agents
+    const WALLET_NAMES = {};
+    (async () => {
+      try {
+        const r = await fetch('/api/agents');
+        const d = await r.json();
+        d.agents.forEach(a => { if (a.wallet) WALLET_NAMES[a.wallet.toLowerCase()] = a.role.charAt(0).toUpperCase() + a.role.slice(1); });
+      } catch {}
+    })();
 
     function walletLabel(addr) {
       if (!addr) return '?';

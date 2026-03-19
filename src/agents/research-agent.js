@@ -47,7 +47,7 @@ class ResearchAgent extends BaseAgent {
         supplementaryResults = fcResult.data;
         this.log('firecrawl_search_completed', { query });
       } catch (err) {
-        // Firecrawl search is supplementary, don't log failure to timeline
+        this.log('firecrawl_search_skipped', { reason: 'supplementary search unavailable', error: err.message });
       }
     }
 

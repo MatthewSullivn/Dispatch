@@ -251,6 +251,16 @@ app.get('/api/audit', (req, res) => {
   });
 });
 
+// Reasoning log — agent decision-making alongside transactions
+app.get('/api/reasoning', (req, res) => {
+  const reasoningEvents = masterTimeline.filter(e =>
+    e.reasoning || ['subtasks_planned', 'agent_discovered', 'dispatching_task',
+      'budget_exceeded', 'payment_initiated', 'payment_completed', 'escrow_created',
+      'escrow_released', 'goal_received', 'goal_completed'].includes(e.action)
+  );
+  res.json({ reasoning: reasoningEvents });
+});
+
 // Agent info
 app.get('/api/agents', (req, res) => {
   res.json({
@@ -276,7 +286,9 @@ app.get('/api/transactions', async (req, res) => {
         const result = await agent.locus.getTransactions();
         const txns = result.data?.data?.transactions || result.data?.transactions || [];
         txns.forEach(tx => { tx._agent = name; all.push(tx); });
-      } catch {}
+      } catch (err) {
+        console.warn(`Failed to fetch ${name} transactions:`, err.message);
+      }
     }));
     // Sort by date descending
     all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));

@@ -64,11 +64,14 @@ class ServiceRegistry {
   }
 
   getAll() {
-    return Array.from(this.services.values());
+    // Strip sensitive fields before returning
+    return Array.from(this.services.values()).map(({ locusApiKey, ...safe }) => safe);
   }
 
   getByAgent(agentName) {
-    return Array.from(this.services.values()).filter(s => s.agentName === agentName);
+    return Array.from(this.services.values())
+      .filter(s => s.agentName === agentName)
+      .map(({ locusApiKey, ...safe }) => safe);
   }
 }
 

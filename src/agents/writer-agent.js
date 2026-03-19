@@ -1,10 +1,62 @@
+/**
+ * Writer agent for Agent Mesh.
+ *
+ * Synthesizes research findings into professional reports using LLMs
+ * through Locus wrapped APIs. Each API call is billed in USDC.
+ *
+ * Provider priority: Gemini (primary) → Grok (fallback) → static summary.
+ */
 const BaseAgent = require('./base-agent');
+
+// LLM provider configuration
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GROK_MODEL = 'grok-3-mini-fast';
+const MAX_OUTPUT_TOKENS = 4096;
+const SYNTHESIS_TEMPERATURE = 0.7;
+
+// Content truncation limits to fit within LLM context windows
+const PRIMARY_TRUNCATE_LIMIT = 3000;
+const SUPPLEMENTARY_TRUNCATE_LIMIT = 2000;
+
+/** LLM providers to try in order of preference. */
+const LLM_PROVIDERS = [
+  {
+    name: 'gemini',
+    endpoint: 'chat',
+    buildBody: (prompt) => ({
+      model: GEMINI_MODEL,
+      systemInstruction: 'You are a professional report writer. Produce clear, well-structured reports with actionable takeaways.',
+      messages: [{ role: 'user', content: prompt }],
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      temperature: SYNTHESIS_TEMPERATURE,
+    }),
+  },
+  {
+    name: 'grok',
+    endpoint: 'chat',
+    buildBody: (prompt) => ({
+      model: GROK_MODEL,
+      messages: [
+        { role: 'system', content: 'You are a professional report writer. Produce clear, well-structured reports with actionable takeaways.' },
+        { role: 'user', content: prompt },
+      ],
+    }),
+  },
+];
 
 class WriterAgent extends BaseAgent {
   constructor(config) {
     super({ ...config, role: 'writer' });
   }
 
+  /**
+   * Synthesize research findings into a professional report.
+   * Tries LLM providers in order; falls back to a static summary
+   * if all providers fail (e.g. due to insufficient wallet balance).
+   * @param {Array<object>} researchFindings - Research results from ResearchAgent
+   * @param {string} outputFormat - Output format (default: 'report')
+   * @returns {object} Report with content, provider used, and metadata
+   */
   async synthesize(researchFindings, outputFormat = 'report') {
     this.log('synthesis_started', {
       inputSources: researchFindings.length,
@@ -13,36 +65,13 @@ class WriterAgent extends BaseAgent {
 
     const prompt = this._buildPrompt(researchFindings, outputFormat);
 
-    // Try multiple LLM providers via Locus wrapped APIs
-    const providers = [
-      { name: 'gemini', endpoint: 'chat', body: {
-        model: 'gemini-2.5-flash',
-        systemInstruction: 'You are a professional report writer. Produce clear, well-structured reports with actionable takeaways.',
-        messages: [{ role: 'user', content: prompt }],
-        maxOutputTokens: 4096,
-        temperature: 0.7,
-      }},
-      { name: 'grok', endpoint: 'chat', body: {
-        model: 'grok-3-mini-fast',
-        messages: [
-          { role: 'system', content: 'You are a professional report writer. Produce clear, well-structured reports with actionable takeaways.' },
-          { role: 'user', content: prompt },
-        ],
-      }},
-    ];
-
-    for (const provider of providers) {
+    // Try each LLM provider in order
+    for (const provider of LLM_PROVIDERS) {
       try {
-        const result = await this.callAPI(provider.name, provider.endpoint, provider.body);
+        const result = await this.callAPI(provider.name, provider.endpoint, provider.buildBody(prompt));
         this.log('synthesis_completed', { provider: provider.name, format: outputFormat });
 
-        // Locus wraps responses in { success, data: { ...provider response } }
-        const apiData = result.data?.data || result.data;
-        const content = apiData?.choices?.[0]?.message?.content
-          || apiData?.candidates?.[0]?.content?.parts?.[0]?.text
-          || apiData?.result
-          || (typeof apiData === 'string' ? apiData : JSON.stringify(apiData));
-
+        const content = this._extractContent(result);
         return {
           report: content,
           format: outputFormat,
@@ -55,8 +84,8 @@ class WriterAgent extends BaseAgent {
       }
     }
 
-    // Fallback: produce a structured summary without API
-    this.log('synthesis_fallback_used');
+    // All providers failed — produce a static summary
+    this.log('synthesis_fallback_used', { reason: 'All LLM providers failed' });
     return {
       report: this._fallbackSummary(researchFindings),
       format: outputFormat,
@@ -66,26 +95,32 @@ class WriterAgent extends BaseAgent {
     };
   }
 
+  // ── Private ────────────────────────────────────────────────────
+
+  /**
+   * Extract the generated text from a Locus wrapped API response.
+   * Handles different response shapes from Gemini and Grok.
+   */
+  _extractContent(result) {
+    const apiData = result.data?.data || result.data;
+    return apiData?.choices?.[0]?.message?.content        // Grok / OpenAI format
+      || apiData?.candidates?.[0]?.content?.parts?.[0]?.text // Gemini format
+      || apiData?.result
+      || (typeof apiData === 'string' ? apiData : JSON.stringify(apiData));
+  }
+
+  /** Build the synthesis prompt from research findings. */
   _buildPrompt(findings, format) {
     const sections = findings.map((f, i) => {
       let content = `## Source ${i + 1}: ${f.query}\n`;
       if (f.scrapedData) {
-        const scraped = typeof f.scrapedData === 'string'
-          ? f.scrapedData.slice(0, 3000)
-          : JSON.stringify(f.scrapedData).slice(0, 3000);
-        content += `Scraped content (via Firecrawl):\n${scraped}\n\n`;
+        content += `Scraped content (via Firecrawl):\n${this._truncate(f.scrapedData, PRIMARY_TRUNCATE_LIMIT)}\n\n`;
       }
       if (f.searchResults) {
-        const search = typeof f.searchResults === 'string'
-          ? f.searchResults.slice(0, 3000)
-          : JSON.stringify(f.searchResults).slice(0, 3000);
-        content += `Search results (via Exa):\n${search}\n\n`;
+        content += `Search results (via Exa):\n${this._truncate(f.searchResults, PRIMARY_TRUNCATE_LIMIT)}\n\n`;
       }
       if (f.supplementaryResults) {
-        const supp = typeof f.supplementaryResults === 'string'
-          ? f.supplementaryResults.slice(0, 2000)
-          : JSON.stringify(f.supplementaryResults).slice(0, 2000);
-        content += `Supplementary results (via Firecrawl):\n${supp}\n\n`;
+        content += `Supplementary results (via Firecrawl):\n${this._truncate(f.supplementaryResults, SUPPLEMENTARY_TRUNCATE_LIMIT)}\n\n`;
       }
       return content;
     });
@@ -102,6 +137,13 @@ IMPORTANT: Do NOT use placeholder text like "[Your Name]", "[Current Date]", "[Y
 Research findings:\n\n${sections.join('\n')}`;
   }
 
+  /** Truncate data to a character limit, handling both strings and objects. */
+  _truncate(data, limit) {
+    const str = typeof data === 'string' ? data : JSON.stringify(data);
+    return str.slice(0, limit);
+  }
+
+  /** Generate a static summary when no LLM provider is available. */
   _fallbackSummary(findings) {
     const sections = findings.map((f, i) => {
       let section = `## Finding ${i + 1}: ${f.query}\n`;

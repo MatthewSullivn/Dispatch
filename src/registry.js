@@ -1,11 +1,35 @@
+/**
+ * Service registry for Agent Mesh.
+ *
+ * A marketplace where agents advertise their capabilities and prices.
+ * The orchestrator queries this registry to discover the cheapest
+ * capable agent for each subtask. Services are sorted by price
+ * (cheapest first) so the orchestrator always gets the best deal.
+ *
+ * Any agent can register a service. New agents that join the mesh
+ * are automatically discoverable.
+ */
 const { v4: uuidv4 } = require('uuid');
 const meshEvents = require('./event-bus');
 
 class ServiceRegistry {
   constructor() {
+    /** @type {Map<string, object>} Registered services by ID */
     this.services = new Map();
   }
 
+  /**
+   * Register a new service in the marketplace.
+   * @param {string} agentName - Name of the agent providing the service
+   * @param {string} walletAddress - Agent's wallet address for payments
+   * @param {string} locusApiKey - Agent's Locus API key (stored internally, never exposed)
+   * @param {object} service - Service definition
+   * @param {string} service.name - Service display name
+   * @param {string} service.description - What the service does
+   * @param {number} service.price - Price in USDC per task
+   * @param {string[]} service.capabilities - Searchable capability tags
+   * @returns {object} The registered service entry
+   */
   register(agentName, walletAddress, locusApiKey, service) {
     const id = uuidv4();
     const entry = {
@@ -31,8 +55,15 @@ class ServiceRegistry {
     return entry;
   }
 
+  /**
+   * Search for services by keyword query.
+   * Scores services by how many query terms match their name,
+   * description, and capabilities. Returns results sorted by relevance.
+   * @param {string} query - Space-separated search terms
+   * @returns {Array<object>} Matching services (API keys stripped)
+   */
   discover(query) {
-    const terms = query.toLowerCase().split(/\s+/);
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
     const results = [];
 
     for (const service of this.services.values()) {
@@ -44,13 +75,19 @@ class ServiceRegistry {
 
       const score = terms.reduce((s, term) => s + (searchable.includes(term) ? 1 : 0), 0);
       if (score > 0) {
-        results.push({ ...service, score });
+        results.push({ ...this._sanitize(service), score });
       }
     }
 
     return results.sort((a, b) => b.score - a.score);
   }
 
+  /**
+   * Find services that match a specific capability.
+   * Returns results sorted by price (cheapest first).
+   * @param {string} capability - Capability to search for
+   * @returns {Array<object>} Matching services sorted by price
+   */
   findByCapability(capability) {
     const cap = capability.toLowerCase();
     const results = [];
@@ -59,19 +96,34 @@ class ServiceRegistry {
         results.push(service);
       }
     }
-    // Return cheapest first
     return results.sort((a, b) => a.price - b.price);
   }
 
+  /**
+   * Get all registered services (API keys stripped for safety).
+   * @returns {Array<object>} All services without sensitive fields
+   */
   getAll() {
-    // Strip sensitive fields before returning
-    return Array.from(this.services.values()).map(({ locusApiKey, ...safe }) => safe);
+    return Array.from(this.services.values()).map(s => this._sanitize(s));
   }
 
+  /**
+   * Get all services registered by a specific agent.
+   * @param {string} agentName - Agent name to filter by
+   * @returns {Array<object>} Matching services (API keys stripped)
+   */
   getByAgent(agentName) {
     return Array.from(this.services.values())
       .filter(s => s.agentName === agentName)
-      .map(({ locusApiKey, ...safe }) => safe);
+      .map(s => this._sanitize(s));
+  }
+
+  /**
+   * Strip sensitive fields (API keys) before returning service data.
+   * @private
+   */
+  _sanitize({ locusApiKey, ...safe }) {
+    return safe;
   }
 }
 

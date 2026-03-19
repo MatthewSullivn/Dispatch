@@ -1,15 +1,32 @@
+/**
+ * Escrow manager for Agent Mesh.
+ *
+ * Wraps Locus checkout sessions to implement escrow between agents:
+ *   1. Orchestrator creates a checkout session (locks funds)
+ *   2. Worker agent runs preflight (verifies session is valid)
+ *   3. After work is delivered, orchestrator releases payment (agent/pay)
+ *
+ * If escrow creation fails, the orchestrator falls back to direct
+ * wallet-to-wallet payment or email escrow.
+ */
 const meshEvents = require('./event-bus');
 
 class EscrowManager {
   constructor() {
+    /** @type {Map<string, object>} Active escrow sessions by session ID */
     this.sessions = new Map();
   }
 
   /**
-   * Full escrow flow:
-   * 1. Orchestrator creates checkout session (holds funds description)
-   * 2. Worker agent does preflight (verifies session is valid)
-   * 3. After work is done, orchestrator releases payment (agent/pay)
+   * Create a checkout session to escrow funds before work begins.
+   * @param {LocusClient} locusClient - Buyer's Locus client
+   * @param {object} params - Escrow parameters
+   * @param {number} params.amount - USDC amount to lock
+   * @param {string} params.description - What the escrow is for
+   * @param {string} params.buyerAgent - Name of the paying agent
+   * @param {string} params.sellerAgent - Name of the receiving agent
+   * @param {object} params.metadata - Additional metadata
+   * @returns {object} Session with sessionId, status, amount
    */
   async createEscrow(locusClient, { amount, description, buyerAgent, sellerAgent, metadata = {} }) {
     meshEvents.emit('agent-event', {
@@ -22,19 +39,11 @@ class EscrowManager {
       seller: sellerAgent,
     });
 
-    // Create checkout session — no webhook for localhost (causes 500)
-    // Only pass webhookUrl if we have a deployed HTTPS URL
+    // Only pass webhookUrl if we have a deployed HTTPS URL (localhost causes 500)
     const deployedUrl = process.env.DEPLOYED_URL;
     const webhookUrl = deployedUrl && deployedUrl.startsWith('https')
       ? `${deployedUrl}/api/webhooks/checkout`
       : undefined;
-
-    const body = {
-      amount: String(amount),
-      description,
-      metadata: { ...metadata, buyerAgent, sellerAgent },
-    };
-    if (webhookUrl) body.webhookUrl = webhookUrl;
 
     const result = await locusClient.createCheckoutSession(
       amount,
@@ -61,6 +70,12 @@ class EscrowManager {
     return session;
   }
 
+  /**
+   * Worker agent verifies an escrow session via preflight check.
+   * Updates the session status to 'preflight_ok' or 'preflight_failed'.
+   * @param {LocusClient} workerLocusClient - Worker's Locus client
+   * @param {string} sessionId - Checkout session to verify
+   */
   async preflight(workerLocusClient, sessionId) {
     const session = this.sessions.get(sessionId);
     const result = await workerLocusClient.checkoutPreflight(sessionId);
@@ -83,6 +98,12 @@ class EscrowManager {
     return result;
   }
 
+  /**
+   * Release escrowed funds after work is delivered.
+   * Buyer agent pays out the checkout session.
+   * @param {LocusClient} buyerLocusClient - Buyer's Locus client
+   * @param {string} sessionId - Checkout session to release
+   */
   async releasePayment(buyerLocusClient, sessionId) {
     const session = this.sessions.get(sessionId);
 
@@ -105,10 +126,12 @@ class EscrowManager {
     return result;
   }
 
+  /** Get all escrow sessions. */
   getAll() {
     return Array.from(this.sessions.values());
   }
 
+  /** Get sessions that are still pending or awaiting release. */
   getPending() {
     return this.getAll().filter(s => s.status === 'pending' || s.status === 'preflight_ok');
   }

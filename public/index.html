@@ -1532,7 +1532,9 @@
     }
 
     // Wallet-to-name mapping, populated dynamically from /api/agents
-    const WALLET_NAMES = {};
+    const WALLET_NAMES = {
+      '0x3c5cbe28eca3b96023c45d3f877da834f1c7d5fa': 'Locus API',
+    };
     (async () => {
       try {
         const r = await fetch('/api/agents');

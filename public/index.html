@@ -1374,14 +1374,14 @@
     }
 
     function eventIcon(action, type) {
-      if (type === 'payment' || action?.includes('payment')) return '$';
-      if (type === 'escrow' || action?.includes('escrow')) return '~';
-      if (type === 'approval' || action?.includes('approval')) return '!';
-      if (type === 'api' || action?.includes('api')) return '>';
-      if (type === 'registry' || action?.includes('register')) return '+';
-      if (action?.includes('goal')) return '*';
-      if (action?.includes('dispatch')) return '^';
-      return '.';
+      if (type === 'payment' || action?.includes('payment')) return '\u25C8';
+      if (type === 'escrow' || action?.includes('escrow')) return '\u25C7';
+      if (type === 'approval' || action?.includes('approval')) return '\u25B3';
+      if (type === 'api' || action?.includes('api')) return '\u25B8';
+      if (type === 'registry' || action?.includes('register')) return '\u25CF';
+      if (action?.includes('goal')) return '\u25C9';
+      if (action?.includes('dispatch')) return '\u25B6';
+      return '\u25AA';
     }
 
     function detailClass(action, type) {

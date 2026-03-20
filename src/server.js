@@ -35,7 +35,11 @@ const REASONING_ACTIONS = new Set([
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// Serve Next.js static export (out/) if it exists, otherwise fall back to public/
+const fs = require('fs');
+const outDir = path.join(__dirname, '..', 'out');
+const publicDir = path.join(__dirname, '..', 'public');
+app.use(express.static(fs.existsSync(outDir) ? outDir : publicDir));
 
 // ── Core State ───────────────────────────────────────────────────
 
@@ -309,6 +313,12 @@ app.get('/api/transactions', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// SPA fallback — serve index.html for non-API routes
+app.get('*', (req, res) => {
+  const staticRoot = fs.existsSync(outDir) ? outDir : publicDir;
+  res.sendFile(path.join(staticRoot, 'index.html'));
 });
 
 // ── Start ────────────────────────────────────────────────────────

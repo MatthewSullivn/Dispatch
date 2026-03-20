@@ -9,8 +9,7 @@
     "dev:next": "next dev",
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "start:server": "node src/server.js"
+    "start": "node src/server.js"
   },
   "keywords": [
     "locus",

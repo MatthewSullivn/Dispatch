@@ -68,7 +68,7 @@ function eventIconColor(action: string, type: string): string {
   if (type === "approval" || action?.includes("approval")) return "text-[#ffe66d]";
   if (type === "api" || action?.includes("api")) return "text-[#a78bfa]";
   if (action?.includes("goal")) return "text-[#ff6b6b]";
-  return "text-white/15";
+  return "text-white/30";
 }
 
 /* ── Types ── */
@@ -416,12 +416,12 @@ export default function Home() {
           <h1 className="text-7xl font-black tracking-[-4px] leading-[0.9] text-white">
             Dispatch
           </h1>
-          <p className="text-[17px] text-white/35 mt-5 leading-relaxed font-normal max-w-[520px] mx-auto">
+          <p className="text-[17px] text-white/50 mt-5 leading-relaxed font-normal max-w-[520px] mx-auto">
             Autonomous AI agents that discover, hire, and pay each other in USDC on Base.
           </p>
           <div className="flex justify-center gap-2 mt-7">
             {["Locus", "Base", "USDC"].map(b => (
-              <span key={b} className="font-mono text-[10px] px-3.5 py-1.5 rounded-full font-semibold tracking-wider uppercase bg-white/4 text-white/40 border border-white/6">
+              <span key={b} className="font-mono text-[10px] px-3.5 py-1.5 rounded-full font-semibold tracking-wider uppercase bg-white/8 text-white/50 border border-white/10">
                 {b}
               </span>
             ))}
@@ -437,12 +437,12 @@ export default function Home() {
         >
           <div className="flex gap-1.5 flex-wrap justify-center mb-4">
             {exampleChips.map(chip => (
-              <button key={chip} onClick={() => setGoal(chip)} className="text-[11px] text-white/30 bg-transparent border border-white/6 rounded-full px-3.5 py-1.5 cursor-pointer transition-all hover:border-white/15 hover:text-white/60 font-medium">
+              <button key={chip} onClick={() => setGoal(chip)} className="text-[11px] text-white/40 bg-transparent border border-white/10 rounded-full px-3.5 py-1.5 cursor-pointer transition-all hover:border-white/25 hover:text-white/70 font-medium">
                 {chip}
               </button>
             ))}
           </div>
-          <div className="flex gap-2 bg-white/3 border border-white/7 rounded-full p-1.5 pl-6 items-center transition-colors focus-within:border-white/15">
+          <div className="flex gap-2 bg-white/5 border border-white/10 rounded-full p-1.5 pl-6 items-center transition-colors focus-within:border-white/25">
             <input
               type="text"
               value={goal}
@@ -450,7 +450,7 @@ export default function Home() {
               onKeyDown={e => e.key === "Enter" && runGoal()}
               maxLength={500}
               placeholder="Give Dispatch a goal..."
-              className="flex-1 bg-transparent border-none py-2.5 text-white/90 text-[15px] font-normal outline-none placeholder:text-white/20"
+              className="flex-1 bg-transparent border-none py-2.5 text-white/90 text-[15px] font-normal outline-none placeholder:text-white/35"
             />
             <button
               onClick={runGoal}
@@ -461,15 +461,15 @@ export default function Home() {
               {running ? "RUNNING..." : "RUN DISPATCH"}
             </button>
           </div>
-          <div className="flex gap-6 mt-3 justify-center text-xs text-white/25 font-medium">
-            <span>Budget <input type="number" value={budget} onChange={e => setBudget(parseFloat(e.target.value) || 1)} min={0.1} step={0.25} className="w-[60px] bg-transparent border border-white/8 rounded-full px-2.5 py-1 text-white/60 font-mono text-[11px] outline-none text-center focus:border-white/20 mx-1" /> USDC</span>
-            <span>Max per task <input type="number" value={maxPerTask} onChange={e => setMaxPerTask(parseFloat(e.target.value) || 0.25)} min={0.05} step={0.05} className="w-[60px] bg-transparent border border-white/8 rounded-full px-2.5 py-1 text-white/60 font-mono text-[11px] outline-none text-center focus:border-white/20 mx-1" /> USDC</span>
+          <div className="flex gap-6 mt-3 justify-center text-xs text-white/40 font-medium">
+            <span>Budget <input type="number" value={budget} onChange={e => setBudget(parseFloat(e.target.value) || 1)} min={0.1} step={0.25} className="w-[60px] bg-transparent border border-white/12 rounded-full px-2.5 py-1 text-white/70 font-mono text-[11px] outline-none text-center focus:border-white/30 mx-1" /> USDC</span>
+            <span>Max per task <input type="number" value={maxPerTask} onChange={e => setMaxPerTask(parseFloat(e.target.value) || 0.25)} min={0.05} step={0.05} className="w-[60px] bg-transparent border border-white/12 rounded-full px-2.5 py-1 text-white/70 font-mono text-[11px] outline-none text-center focus:border-white/30 mx-1" /> USDC</span>
           </div>
         </motion.div>
 
         {/* ── Status Banner ── */}
         {showBanner && (
-          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/3 border border-white/6 mb-6 text-xs text-white/50">
+          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/6 border border-white/10 mb-6 text-xs text-white/60">
             <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
             <span className="text-white font-bold">{statusPhase}</span> {statusDetail}
           </motion.div>
@@ -485,7 +485,7 @@ export default function Home() {
             { label: "Escrows", value: String(escrows.length) },
           ].map((s, i) => (
             <div key={s.label} className={`flex gap-1.5 items-center px-5 ${i < 4 ? "border-r border-white/6" : ""}`}>
-              <span className="text-white/20 text-[10px] font-semibold uppercase tracking-widest">{s.label}</span>
+              <span className="text-white/35 text-[10px] font-semibold uppercase tracking-widest">{s.label}</span>
               <span className={`font-mono font-bold text-xs ${s.red ? "text-[#ff6b6b]" : "text-white/80"}`}>{s.value}</span>
             </div>
           ))}
@@ -493,23 +493,23 @@ export default function Home() {
 
         {/* ── Agent Network ── */}
         <div className="mb-12">
-          <div className="font-mono text-[10px] text-white/20 uppercase tracking-[3px] mb-5 text-center font-semibold">Agent Network</div>
+          <div className="font-mono text-[10px] text-white/35 uppercase tracking-[3px] mb-5 text-center font-semibold">Agent Network</div>
           <div className="flex items-center justify-center">
             {agents.map((agent, i) => (
               <React.Fragment key={agent.id}>
-                <div className={`bg-white/2 border rounded-2xl p-6 min-w-[190px] text-center transition-all duration-400 relative overflow-hidden ${activeAgents.has(agent.id) ? "border-white/15" : "border-white/6 hover:border-white/10 hover:bg-white/4"} ${running ? "border-white/12 shadow-[0_0_40px_rgba(255,255,255,0.02)]" : ""}`}>
+                <div className={`bg-white/5 border rounded-2xl p-6 min-w-[190px] text-center transition-all duration-400 relative overflow-hidden ${activeAgents.has(agent.id) ? "border-white/25" : "border-white/10 hover:border-white/15 hover:bg-white/8"} ${running ? "border-white/15 shadow-[0_0_40px_rgba(255,255,255,0.04)]" : ""}`}>
                   <div className="absolute top-0 left-[20%] right-[20%] h-px opacity-0 hover:opacity-100 transition-opacity" style={{ background: `linear-gradient(90deg, transparent, ${agent.glowColor}, transparent)` }} />
                   <div className="flex items-center justify-center gap-1.5 mb-1">
                     <span className={`w-1.5 h-1.5 rounded-full ${agent.dotColor} ${activeAgents.has(agent.id) ? "animate-pulse" : ""}`} />
                     <span className="text-sm font-bold text-white/90">{agent.name}</span>
                   </div>
-                  <div className="text-[11px] text-white/30 mt-1">{agent.role}</div>
+                  <div className="text-[11px] text-white/45 mt-1">{agent.role}</div>
                   <div className="font-mono text-[15px] font-bold mt-3 text-white">
                     {balances[agent.id]?.usdc_balance ? `${parseFloat(balances[agent.id].usdc_balance).toFixed(2)} USDC` : "--"}
                   </div>
                   {balances[agent.id]?.wallet_address && (
-                    <div className="font-mono text-[9px] text-white/15 mt-1">
-                      <a href={`https://basescan.org/address/${balances[agent.id].wallet_address}`} target="_blank" rel="noopener" className="text-white/15 no-underline hover:text-white/50 transition-colors">
+                    <div className="font-mono text-[9px] text-white/30 mt-1">
+                      <a href={`https://basescan.org/address/${balances[agent.id].wallet_address}`} target="_blank" rel="noopener" className="text-white/30 no-underline hover:text-white/60 transition-colors">
                         {balances[agent.id].wallet_address.slice(0, 6)}...{balances[agent.id].wallet_address.slice(-4)}
                       </a>
                     </div>
@@ -517,10 +517,10 @@ export default function Home() {
                 </div>
                 {i < 2 && (
                   <div className="px-3 text-center">
-                    <div className={`w-10 h-px mx-auto relative ${arrowsOn ? "bg-white/20" : "bg-white/8"}`}>
-                      <span className={`absolute right-[-4px] top-[-2px] w-0 h-0 border-l-[5px] border-t-[3px] border-b-[3px] border-t-transparent border-b-transparent ${arrowsOn ? "border-l-white/30" : "border-l-white/12"}`} />
+                    <div className={`w-10 h-px mx-auto relative ${arrowsOn ? "bg-white/30" : "bg-white/12"}`}>
+                      <span className={`absolute right-[-4px] top-[-2px] w-0 h-0 border-l-[5px] border-t-[3px] border-b-[3px] border-t-transparent border-b-transparent ${arrowsOn ? "border-l-white/40" : "border-l-white/20"}`} />
                     </div>
-                    <span className={`font-mono text-[8px] font-semibold tracking-widest uppercase mt-1 block ${arrowsOn ? "text-white/40" : "text-white/15"}`}>USDC</span>
+                    <span className={`font-mono text-[8px] font-semibold tracking-widest uppercase mt-1 block ${arrowsOn ? "text-white/50" : "text-white/25"}`}>USDC</span>
                   </div>
                 )}
               </React.Fragment>
@@ -530,22 +530,22 @@ export default function Home() {
 
         {/* ── Stepper ── */}
         {showStepper && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8 bg-white/2 border border-white/5 rounded-2xl p-5">
-            <div className="text-[10px] uppercase tracking-[3px] font-bold text-white/25 mb-3.5">Payment Flow</div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8 bg-white/5 border border-white/10 rounded-2xl p-5">
+            <div className="text-[10px] uppercase tracking-[3px] font-bold text-white/40 mb-3.5">Payment Flow</div>
             {STEP_LABELS.map((label, i) => {
               const state = steps[i];
               return (
-                <div key={i} className={`flex items-center gap-3 py-2 ${i < 7 ? "border-b border-white/3" : ""}`}>
+                <div key={i} className={`flex items-center gap-3 py-2 ${i < 7 ? "border-b border-white/5" : ""}`}>
                   <div className={`w-[22px] h-[22px] rounded-full flex items-center justify-center font-mono text-[9px] font-bold shrink-0 transition-all ${
-                    state === "done" ? "bg-[#00d4aa]/10 border border-[#00d4aa]/20 text-[#00d4aa]" :
-                    state === "active" ? "bg-white/10 border border-white/25 text-white animate-pulse" :
-                    state === "error" ? "bg-[#ff6b6b]/10 border border-[#ff6b6b]/20 text-[#ff6b6b]" :
-                    "bg-white/3 border border-white/6 text-white/20"
+                    state === "done" ? "bg-[#00d4aa]/15 border border-[#00d4aa]/25 text-[#00d4aa]" :
+                    state === "active" ? "bg-white/15 border border-white/30 text-white animate-pulse" :
+                    state === "error" ? "bg-[#ff6b6b]/15 border border-[#ff6b6b]/25 text-[#ff6b6b]" :
+                    "bg-white/5 border border-white/10 text-white/30"
                   }`}>
                     {state === "done" ? "ok" : state === "error" ? "!" : i + 1}
                   </div>
-                  <span className={`text-xs font-medium transition-colors ${state === "active" ? "text-white/90" : state === "done" ? "text-white/25" : "text-white/30"}`}>{label}</span>
-                  <span className={`ml-auto font-mono text-[9px] ${state === "active" ? "text-white/50" : state === "done" ? "text-white/20" : "text-white/15"}`}>{STEP_DETAILS[i]}</span>
+                  <span className={`text-xs font-medium transition-colors ${state === "active" ? "text-white/90" : state === "done" ? "text-white/40" : "text-white/45"}`}>{label}</span>
+                  <span className={`ml-auto font-mono text-[9px] ${state === "active" ? "text-white/60" : state === "done" ? "text-white/30" : "text-white/25"}`}>{STEP_DETAILS[i]}</span>
                 </div>
               );
             })}
@@ -561,10 +561,10 @@ export default function Home() {
                 timeline.map((ev, i) => (
                   <div key={i} className="flex gap-2 py-[5px] items-baseline text-[11px] border-b border-white/[0.025] last:border-none animate-[slideIn_0.2s_ease]">
                     <span className={`text-[6px] min-w-[10px] ${eventIconColor(ev.action, ev.type || "")}`}>&bull;</span>
-                    <span className="font-mono text-white/15 text-[9px] min-w-[58px] font-medium">{new Date(ev.timestamp).toLocaleTimeString("en-US", { hour12: false })}</span>
+                    <span className="font-mono text-white/30 text-[9px] min-w-[58px] font-medium">{new Date(ev.timestamp).toLocaleTimeString("en-US", { hour12: false })}</span>
                     <span className={`font-bold min-w-[85px] text-[10px] ${agentCls(ev.agent)}`}>{ev.agent || "mesh"}</span>
-                    <span className="font-mono text-white/20 text-[10px]">{ev.action}</span>
-                    <span className="text-white/35 text-[11px]">
+                    <span className="font-mono text-white/35 text-[10px]">{ev.action}</span>
+                    <span className="text-white/50 text-[11px]">
                       {ev.amount ? `${ev.amount} USDC` : ev.provider ? `${ev.provider}/${ev.endpoint}` : ev.query ? ev.query?.slice(0, 50) : ev.task ? ev.task?.slice(0, 50) : ev.serviceName ? `${ev.serviceName} @ $${ev.price}` : ev.error ? ev.error?.slice(0, 80) : ev.sessionId ? `session:${ev.sessionId?.slice(0, 8)}` : ""}
                     </span>
                   </div>
@@ -577,12 +577,12 @@ export default function Home() {
           <Panel title="Marketplace" count={services.length}>
             {services.length === 0 ? <Empty>loading services...</Empty> :
               services.map((s, i) => (
-                <div key={i} className="flex items-center gap-3 p-3.5 bg-white/2 border border-white/4 rounded-xl mb-2 transition-all hover:border-white/8">
+                <div key={i} className="flex items-center gap-3 p-3.5 bg-white/5 border border-white/8 rounded-xl mb-2 transition-all hover:border-white/15">
                   <div>
-                    <div className="text-[13px] font-bold text-white/85">{s.serviceName}</div>
-                    <div className="text-[11px] text-white/30 mt-0.5">{s.description.slice(0, 90)}</div>
-                    <div className="flex gap-1 mt-1">{(s.capabilities || []).map(c => <span key={c} className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/3 border border-white/6 text-white/35 font-mono font-medium">{c}</span>)}</div>
-                    <div className="font-mono text-[10px] text-white/20 mt-1">{s.agentName}</div>
+                    <div className="text-[13px] font-bold text-white/90">{s.serviceName}</div>
+                    <div className="text-[11px] text-white/45 mt-0.5">{s.description.slice(0, 90)}</div>
+                    <div className="flex gap-1 mt-1">{(s.capabilities || []).map(c => <span key={c} className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/6 border border-white/10 text-white/50 font-mono font-medium">{c}</span>)}</div>
+                    <div className="font-mono text-[10px] text-white/35 mt-1">{s.agentName}</div>
                   </div>
                   <div className="ml-auto font-mono text-base font-bold text-white whitespace-nowrap">${s.price.toFixed(2)}</div>
                 </div>
@@ -596,17 +596,17 @@ export default function Home() {
               escrows.map((e, i) => {
                 const stCls = e.status.includes("release") ? "bg-[#00d4aa]/6 text-[#00d4aa] border-[#00d4aa]/10" : e.status.includes("fail") ? "bg-[#ff6b6b]/6 text-[#ff6b6b] border-[#ff6b6b]/10" : "bg-[#ffe66d]/6 text-[#ffe66d] border-[#ffe66d]/10";
                 return (
-                  <div key={i} className="p-3.5 bg-white/2 border border-white/4 rounded-xl mb-2.5 text-[11px] transition-colors hover:border-white/8">
+                  <div key={i} className="p-3.5 bg-white/5 border border-white/8 rounded-xl mb-2.5 text-[11px] transition-colors hover:border-white/15">
                     <div className="flex items-center gap-2 mb-2">
                       <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold font-mono tracking-wide uppercase border ${stCls}`}>{e.status}</span>
                       <span className="ml-auto font-mono text-[15px] font-bold text-white">${String(e.amount)}</span>
                     </div>
                     <div className="flex items-center gap-1.5 mb-2">
                       <span className="text-[10px] font-bold font-mono text-[#ff6b6b]">{e.buyerAgent}</span>
-                      <span className="text-white/15 text-[10px]">&rarr;</span>
+                      <span className="text-white/30 text-[10px]">&rarr;</span>
                       <span className="text-[10px] font-bold font-mono text-[#4ecdc4]">{e.sellerAgent}</span>
                     </div>
-                    {e.description && <div className="text-white/35 text-[10px] mb-2">{e.description}</div>}
+                    {e.description && <div className="text-white/50 text-[10px] mb-2">{e.description}</div>}
                   </div>
                 );
               })
@@ -680,7 +680,7 @@ export default function Home() {
 
         {/* ── About ── */}
         <FadeIn>
-          <div id="about" className="grid grid-cols-3 gap-px mb-14 bg-white/4 rounded-2xl overflow-hidden max-md:grid-cols-1">
+          <div id="about" className="grid grid-cols-3 gap-px mb-14 bg-white/8 rounded-2xl overflow-hidden max-md:grid-cols-1">
             {[
               { title: "How it works", text: "Give a goal to the orchestrator. It discovers agents, escrows USDC via Locus, dispatches work, and releases payment on delivery. Every dollar tracked on-chain." },
               { title: "Why it matters", text: "AI agents can think and act, but can't safely pay each other. Dispatch gives every agent its own Locus wallet with spending controls, making autonomous coordination real." },
@@ -688,7 +688,7 @@ export default function Home() {
             ].map(card => (
               <div key={card.title} className="bg-black/90 p-7">
                 <h3 className="text-[13px] font-bold text-white/90 mb-2">{card.title}</h3>
-                <p className="text-[13px] text-white/35 leading-relaxed">{card.text}</p>
+                <p className="text-[13px] text-white/50 leading-relaxed">{card.text}</p>
               </div>
             ))}
           </div>
@@ -697,8 +697,8 @@ export default function Home() {
         {/* ── Locus Integration ── */}
         <FadeIn>
           <div id="locus" className="mb-14">
-            <div className="font-mono text-[10px] text-white/20 uppercase tracking-[3px] mb-5 text-center font-semibold">Locus Integration</div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-px bg-white/4 rounded-xl overflow-hidden">
+            <div className="font-mono text-[10px] text-white/35 uppercase tracking-[3px] mb-5 text-center font-semibold">Locus Integration</div>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-px bg-white/8 rounded-xl overflow-hidden">
               {[
                 { name: "Agent Wallets", desc: "3 autonomous Locus wallets on Base. Agents hold, send, and receive USDC independently.", tag: "core" },
                 { name: "Checkout Session Escrow", desc: "Funds locked via checkout sessions. Worker preflight verifies. Payment released on delivery.", tag: "bonus" },
@@ -711,8 +711,8 @@ export default function Home() {
                 <div key={f.name} className="bg-black/90 p-4">
                   <div className="font-mono text-[10px] text-[#00d4aa] font-bold mb-1">[x]</div>
                   <div className="text-[13px] font-bold text-white/85 mb-1">{f.name}</div>
-                  <div className="text-[11px] text-white/30 leading-relaxed">{f.desc}</div>
-                  <span className="inline-block mt-1.5 text-[8px] font-mono px-2 py-0.5 rounded-full font-bold tracking-wide uppercase bg-white/4 text-white/35 border border-white/6">{f.tag}</span>
+                  <div className="text-[11px] text-white/45 leading-relaxed">{f.desc}</div>
+                  <span className="inline-block mt-1.5 text-[8px] font-mono px-2 py-0.5 rounded-full font-bold tracking-wide uppercase bg-white/8 text-white/50 border border-white/10">{f.tag}</span>
                 </div>
               ))}
             </div>
@@ -723,33 +723,33 @@ export default function Home() {
         <FadeIn>
           <div id="vision" className="mb-14 text-center py-16 px-8">
             <h2 className="text-[32px] font-black text-white tracking-[-1.5px] mb-2">The future of agent commerce</h2>
-            <div className="text-sm text-white/25 mb-6">From hackathon prototype to autonomous agent economy</div>
-            <p className="text-[15px] text-white/40 leading-relaxed max-w-[640px] mx-auto mb-10">
+            <div className="text-sm text-white/40 mb-6">From hackathon prototype to autonomous agent economy</div>
+            <p className="text-[15px] text-white/50 leading-relaxed max-w-[640px] mx-auto mb-10">
               Dispatch proves AI agents can discover, hire, and pay each other without human intervention. Every payment is real USDC on Base. Every decision is auditable. This isn&apos;t a simulation.
             </p>
-            <div className="grid grid-cols-3 gap-px mb-10 text-left bg-white/4 rounded-2xl overflow-hidden max-md:grid-cols-1">
+            <div className="grid grid-cols-3 gap-px mb-10 text-left bg-white/8 rounded-2xl overflow-hidden max-md:grid-cols-1">
               {[
-                { icon: "◆", title: "Agent Marketplace", desc: "Deploy an agent, register a service, start earning USDC. The orchestrator discovers and hires automatically.", tag: "working today", tagCls: "bg-[#00d4aa]/6 text-[#00d4aa] border-[#00d4aa]/8" },
-                { icon: "◇", title: "Escrow-First Payments", desc: "Funds locked before work starts. Workers verify via preflight. Payment releases only on delivery.", tag: "working today", tagCls: "bg-[#00d4aa]/6 text-[#00d4aa] border-[#00d4aa]/8" },
-                { icon: "◊", title: "Pay-Per-Use Intelligence", desc: "Agents call search, scraping, and LLM APIs through Locus. Pay per call in USDC. Costs on-chain.", tag: "working today", tagCls: "bg-[#00d4aa]/6 text-[#00d4aa] border-[#00d4aa]/8" },
-                { icon: "△", title: "Competitive Bidding", desc: "Multiple agents, same capability, different prices. Market competition drives quality up and cost down.", tag: "next milestone", tagCls: "bg-white/3 text-white/40 border-white/6" },
-                { icon: "▵", title: "Reputation Scoring", desc: "Track completion rates and quality on-chain. Orchestrators factor reputation into hiring decisions.", tag: "next milestone", tagCls: "bg-white/3 text-white/40 border-white/6" },
-                { icon: "○", title: "Cross-Network Federation", desc: "Agents from different networks discover and transact. Locus wallets bridge them seamlessly.", tag: "future vision", tagCls: "bg-white/2 text-white/25 border-white/4" },
+                { icon: "◆", title: "Agent Marketplace", desc: "Deploy an agent, register a service, start earning USDC. The orchestrator discovers and hires automatically.", tag: "working today", tagCls: "bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/15" },
+                { icon: "◇", title: "Escrow-First Payments", desc: "Funds locked before work starts. Workers verify via preflight. Payment releases only on delivery.", tag: "working today", tagCls: "bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/15" },
+                { icon: "◊", title: "Pay-Per-Use Intelligence", desc: "Agents call search, scraping, and LLM APIs through Locus. Pay per call in USDC. Costs on-chain.", tag: "working today", tagCls: "bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/15" },
+                { icon: "△", title: "Competitive Bidding", desc: "Multiple agents, same capability, different prices. Market competition drives quality up and cost down.", tag: "next milestone", tagCls: "bg-white/6 text-white/50 border-white/10" },
+                { icon: "▵", title: "Reputation Scoring", desc: "Track completion rates and quality on-chain. Orchestrators factor reputation into hiring decisions.", tag: "next milestone", tagCls: "bg-white/6 text-white/50 border-white/10" },
+                { icon: "○", title: "Cross-Network Federation", desc: "Agents from different networks discover and transact. Locus wallets bridge them seamlessly.", tag: "future vision", tagCls: "bg-white/4 text-white/35 border-white/8" },
               ].map(c => (
                 <div key={c.title} className="p-5 bg-black/90">
-                  <div className="text-base mb-2 opacity-30">{c.icon}</div>
-                  <h3 className="text-[13px] font-bold text-white/85 mb-1">{c.title}</h3>
-                  <p className="text-[11px] text-white/30 leading-relaxed m-0">{c.desc}</p>
+                  <div className="text-base mb-2 opacity-50">{c.icon}</div>
+                  <h3 className="text-[13px] font-bold text-white/90 mb-1">{c.title}</h3>
+                  <p className="text-[11px] text-white/45 leading-relaxed m-0">{c.desc}</p>
                   <span className={`inline-block mt-2 text-[8px] font-bold px-2 py-0.5 rounded-full font-mono tracking-wide uppercase border ${c.tagCls}`}>{c.tag}</span>
                 </div>
               ))}
             </div>
 
             <div className="w-8 h-px bg-white/8 mx-auto mb-6" />
-            <div className="text-base italic text-white/40 max-w-[560px] mx-auto mb-1.5 leading-relaxed">
+            <div className="text-base italic text-white/50 max-w-[560px] mx-auto mb-1.5 leading-relaxed">
               &ldquo;The next billion-dollar company will have <span className="text-white font-bold not-italic">no employees</span> — just AI agents with wallets, discovering work and getting paid.&rdquo;
             </div>
-            <div className="text-[10px] text-white/15 mb-9">— The thesis behind Dispatch</div>
+            <div className="text-[10px] text-white/30 mb-9">— The thesis behind Dispatch</div>
 
             <div className="flex justify-center gap-14">
               {[
@@ -760,7 +760,7 @@ export default function Home() {
               ].map(s => (
                 <div key={s.label}>
                   <div className="font-mono text-[28px] font-black text-white">{s.num}</div>
-                  <div className="text-[9px] text-white/20 uppercase tracking-[1.5px] font-semibold mt-0.5">{s.label}</div>
+                  <div className="text-[9px] text-white/35 uppercase tracking-[1.5px] font-semibold mt-0.5">{s.label}</div>
                 </div>
               ))}
             </div>
@@ -768,13 +768,13 @@ export default function Home() {
         </FadeIn>
 
         {/* ── Footer ── */}
-        <div className="text-center py-10 text-[11px] text-white/15 font-medium border-t border-white/4">
+        <div className="text-center py-10 text-[11px] text-white/30 font-medium border-t border-white/8">
           Dispatch &middot; Built for{" "}
-          <a href="https://synthesis.md" target="_blank" className="text-white/25 no-underline hover:text-white/60 transition-colors">The Synthesis</a>
+          <a href="https://synthesis.md" target="_blank" className="text-white/40 no-underline hover:text-white/70 transition-colors">The Synthesis</a>
           {" "}&middot; Powered by{" "}
-          <a href="https://paywithlocus.com" target="_blank" className="text-white/25 no-underline hover:text-white/60 transition-colors">Locus</a>
+          <a href="https://paywithlocus.com" target="_blank" className="text-white/40 no-underline hover:text-white/70 transition-colors">Locus</a>
           {" "}on{" "}
-          <a href="https://base.org" target="_blank" className="text-white/25 no-underline hover:text-white/60 transition-colors">Base</a>
+          <a href="https://base.org" target="_blank" className="text-white/40 no-underline hover:text-white/70 transition-colors">Base</a>
         </div>
       </div>
     </div>
@@ -784,14 +784,14 @@ export default function Home() {
 /* ── Reusable components ── */
 function Panel({ title, count, full, children }: { title: string; count?: number; full?: boolean; children: React.ReactNode }) {
   return (
-    <div className={`bg-white/[0.015] border border-white/5 rounded-2xl overflow-hidden transition-colors hover:border-white/8 ${full ? "col-span-full" : ""}`}>
-      <div className="px-4 py-3 text-[10px] uppercase tracking-[2px] border-b border-white/4 font-bold flex items-center gap-2 text-white/35">
+    <div className={`bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden transition-colors hover:border-white/15 ${full ? "col-span-full" : ""}`}>
+      <div className="px-4 py-3 text-[10px] uppercase tracking-[2px] border-b border-white/8 font-bold flex items-center gap-2 text-white/50">
         {title}
         {count !== undefined && (
-          <span className="bg-white/5 px-2 py-0.5 rounded-full text-[10px] font-mono text-white/30">{count}</span>
+          <span className="bg-white/8 px-2 py-0.5 rounded-full text-[10px] font-mono text-white/40">{count}</span>
         )}
       </div>
-      <div className="p-3 max-h-[380px] overflow-y-auto text-xs leading-relaxed scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/6">
+      <div className="p-3 max-h-[380px] overflow-y-auto text-xs leading-relaxed scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
         {children}
       </div>
     </div>
@@ -799,7 +799,7 @@ function Panel({ title, count, full, children }: { title: string; count?: number
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="text-white/15 text-center py-6 text-[11px] font-medium">{children}</div>;
+  return <div className="text-white/30 text-center py-6 text-[11px] font-medium">{children}</div>;
 }
 
 function FadeIn({ children }: { children: React.ReactNode }) {

@@ -4,4 +4,5 @@ node_modules/
 credentials.json
 .claude/
 .next/
+out/
 next-env.d.ts

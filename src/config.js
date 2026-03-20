@@ -69,7 +69,7 @@ const BUDGET = {
 const SYSTEM = {
   maxTimelineEvents: 500,       // Rolling event buffer size
   maxGoalLength: 500,           // Maximum goal input length
-  port: process.env.PORT || 3000,
+  port: process.env.PORT || 3001,
   deployedUrl: process.env.DEPLOYED_URL || null,
 };
 

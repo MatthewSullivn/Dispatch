@@ -404,7 +404,7 @@ export default function Home() {
       <MiniNavbar />
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-[980px] mx-auto px-6 before:content-[''] before:absolute before:inset-0 before:-mx-12 before:bg-black/80 before:backdrop-blur-sm before:-z-10 before:rounded-3xl">
+      <div className="relative z-10 w-full max-w-[980px] mx-auto px-6">
 
         {/* ── Hero ── */}
         <motion.div

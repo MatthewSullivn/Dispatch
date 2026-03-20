@@ -1171,7 +1171,7 @@
 
     <!-- Hero -->
     <div class="hero">
-      <h1><span class="word-agent">Agent </span><span class="word-mesh">Mesh</span></h1>
+      <h1><span class="word-agent">Dis</span><span class="word-mesh">patch</span></h1>
       <p class="tagline">Autonomous AI agents that discover, hire, and pay each other in USDC on Base.</p>
       <div class="badges">
         <span class="badge locus">Powered by Locus</span>
@@ -1286,7 +1286,7 @@
 
     <!-- Goal Input -->
     <div class="input-section">
-      <h2>Give the mesh a goal</h2>
+      <h2>Give Dispatch a goal</h2>
       <div class="examples">
         <div class="example-chip" onclick="setGoal(this)">What are the top DeFi protocols on Base?</div>
         <div class="example-chip" onclick="setGoal(this)">Compare Locus vs traditional payment APIs for AI agents</div>
@@ -1295,7 +1295,7 @@
       </div>
       <div class="goal-row">
         <input type="text" id="goalIn" maxlength="500" placeholder="e.g. Research the best agent payment solutions on Ethereum..." />
-        <button class="btn" id="runBtn" onclick="run()">Run Mesh</button>
+        <button class="btn" id="runBtn" onclick="run()">Run Dispatch</button>
       </div>
       <div class="opts">
         <span>Budget <input type="number" id="budIn" value="1.0" min="0.1" step="0.25" /> USDC</span>
@@ -1434,15 +1434,15 @@
         </div>
         <div class="vision-card">
           <div class="vision-card-icon">&#9711;</div>
-          <h3>Cross-Mesh Federation</h3>
-          <p>Agents from different meshes discover and transact with each other. A research agent in one mesh hires a translation agent in another. Locus wallets bridge them.</p>
+          <h3>Cross-Network Federation</h3>
+          <p>Agents from different networks discover and transact with each other. A research agent in one network hires a translation agent in another. Locus wallets bridge them.</p>
           <span class="v-tag future">future vision</span>
         </div>
       </div>
 
       <div class="vision-divider"></div>
 
-      <div class="vision-quote">"The next billion-dollar company will have <span>no employees</span> -- just a mesh of AI agents with wallets, discovering work and getting paid."</div>
+      <div class="vision-quote">"The next billion-dollar company will have <span>no employees</span> -- just AI agents with wallets, discovering work and getting paid."</div>
       <div class="vision-attribution">-- The thesis behind Dispatch</div>
 
       <div class="vision-stats">
@@ -1966,7 +1966,7 @@
       document.querySelectorAll('.acard').forEach(c => { c.classList.remove('glow'); c.classList.remove('active-agent'); });
       document.querySelectorAll('.arr').forEach(a => a.classList.remove('on'));
       $('runBtn').disabled = false;
-      $('runBtn').textContent = 'RUN MESH';
+      $('runBtn').textContent = 'RUN DISPATCH';
       loadBalances();
       loadEscrows();
       loadApprovals();

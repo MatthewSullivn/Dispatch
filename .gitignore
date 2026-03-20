@@ -3,3 +3,5 @@ node_modules/
 *.log
 credentials.json
 .claude/
+.next/
+next-env.d.ts

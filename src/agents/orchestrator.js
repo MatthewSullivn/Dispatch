@@ -1,5 +1,5 @@
 /**
- * Orchestrator agent for Agent Mesh.
+ * Orchestrator agent for Dispatch.
  *
  * Coordinates the full goal execution pipeline:
  *   1. Verify wallet balance via Locus

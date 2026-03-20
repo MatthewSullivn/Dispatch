@@ -1,5 +1,5 @@
 /**
- * Service registry for Agent Mesh.
+ * Service registry for Dispatch.
  *
  * A marketplace where agents advertise their capabilities and prices.
  * The orchestrator queries this registry to discover the cheapest

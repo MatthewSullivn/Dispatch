@@ -1,5 +1,5 @@
 /**
- * Writer agent for Agent Mesh.
+ * Writer agent for Dispatch.
  *
  * Synthesizes research findings into professional reports using LLMs
  * through Locus wrapped APIs. Each API call is billed in USDC.
@@ -129,7 +129,7 @@ class WriterAgent extends BaseAgent {
     return `Based on the following research findings, create a clear, professional ${format} with key insights and actionable takeaways.
 
 IMPORTANT: Do NOT use placeholder text like "[Your Name]", "[Current Date]", "[Your Contact Information]", or "[Link]". Instead:
-- Use "Agent Mesh Research Team" as the author
+- Use "Dispatch Research Team" as the author
 - Use "${today}" as the date
 - For source links, use the actual URLs from the research data if available, or omit the links section
 - Do not include a contact information line

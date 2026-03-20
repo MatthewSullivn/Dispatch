@@ -33,7 +33,7 @@ async function waitForWallet(apiKey, name, maxRetries = 30) {
 }
 
 async function main() {
-  console.log('=== Locus Agent Mesh — Wallet Setup ===\n');
+  console.log('=== Locus Dispatch — Wallet Setup ===\n');
 
   const credentials = {};
   const envLines = [];

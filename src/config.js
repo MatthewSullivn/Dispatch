@@ -1,5 +1,5 @@
 /**
- * Centralized configuration for Agent Mesh.
+ * Centralized configuration for Dispatch.
  *
  * All environment variables, agent definitions, and system constants
  * are defined here. This makes it easy to add new agents, adjust

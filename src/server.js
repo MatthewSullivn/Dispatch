@@ -1,5 +1,5 @@
 /**
- * Agent Mesh — Express server and API routes.
+ * Dispatch — Express server and API routes.
  *
  * Serves the dashboard, initializes agents, and exposes the API:
  *   - POST /api/goal: Submit a goal for autonomous execution
@@ -320,5 +320,5 @@ try {
 }
 
 app.listen(SYSTEM.port, () => {
-  console.log(`Agent Mesh running on http://localhost:${SYSTEM.port}`);
+  console.log(`Dispatch running on http://localhost:${SYSTEM.port}`);
 });

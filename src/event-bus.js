@@ -1,5 +1,5 @@
 /**
- * Global event bus for Agent Mesh.
+ * Global event bus for Dispatch.
  *
  * All agent actions (payments, API calls, escrow events, task updates)
  * are emitted here as 'agent-event' events. The server captures these

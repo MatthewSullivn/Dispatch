@@ -1,5 +1,5 @@
 /**
- * Base agent class for Agent Mesh.
+ * Base agent class for Dispatch.
  *
  * Every agent (orchestrator, researcher, writer) extends BaseAgent.
  * Provides core capabilities:
@@ -151,7 +151,7 @@ class BaseAgent {
     const result = await this.locus.sendEmailEscrow(
       email,
       amount,
-      `Agent Mesh payment: ${taskDescription}`
+      `Dispatch payment: ${taskDescription}`
     );
 
     this.log('email_escrow_sent', {

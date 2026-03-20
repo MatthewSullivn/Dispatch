@@ -1,5 +1,5 @@
 /**
- * Locus API client for Agent Mesh.
+ * Locus API client for Dispatch.
  *
  * Wraps the Locus payment infrastructure API:
  *   - Wallet balance and USDC transfers

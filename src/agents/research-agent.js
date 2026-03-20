@@ -1,5 +1,5 @@
 /**
- * Research agent for Agent Mesh.
+ * Research agent for Dispatch.
  *
  * Searches the web using multiple data sources through Locus wrapped APIs:
  *   - Exa: semantic search (primary)

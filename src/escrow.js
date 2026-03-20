@@ -1,5 +1,5 @@
 /**
- * Escrow manager for Agent Mesh.
+ * Escrow manager for Dispatch.
  *
  * Wraps Locus checkout sessions to implement escrow between agents:
  *   1. Orchestrator creates a checkout session (locks funds)

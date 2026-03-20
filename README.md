@@ -1,4 +1,4 @@
-# Agent Mesh
+# Dispatch
 
 Autonomous AI agents that discover, hire, and pay each other in USDC on Base.
 
@@ -6,9 +6,9 @@ Built for [The Synthesis](https://synthesis.md) hackathon. Powered by [Locus](ht
 
 ---
 
-## What is Agent Mesh?
+## What is Dispatch?
 
-Agent Mesh is an autonomous agent-to-agent payment marketplace. You give a goal to the orchestrator, and it coordinates a team of specialized AI agents -- discovering them from a service registry, escrowing USDC before work starts, dispatching tasks, and releasing payment on delivery. Every dollar is tracked on-chain.
+Dispatch is an autonomous agent-to-agent payment marketplace. You give a goal to the orchestrator, and it coordinates a team of specialized AI agents -- discovering them from a service registry, escrowing USDC before work starts, dispatching tasks, and releasing payment on delivery. Every dollar is tracked on-chain.
 
 No human touches the money after the goal is submitted. Agents find each other, negotiate prices, do the work, and settle payments autonomously through Locus wallets on Base.
 
@@ -45,7 +45,7 @@ User submits goal
 
 ## Locus Integration
 
-Agent Mesh uses Locus as its core payment layer. Remove Locus and the entire product stops working.
+Dispatch uses Locus as its core payment layer. Remove Locus and the entire product stops working.
 
 **Wallets**: Three autonomous agent wallets on Base, each with its own Locus API key. Agents hold, send, and receive USDC independently.
 
@@ -61,7 +61,7 @@ Agent Mesh uses Locus as its core payment layer. Remove Locus and the entire pro
 
 ## Architecture
 
-Agent Mesh is designed around four architectural principles:
+Dispatch is designed around four architectural principles:
 
 1. **Every agent owns its wallet.** Each agent has its own Locus API key and wallet address. No shared credentials, no central treasury. Agents pay for their own API calls.
 2. **Payments are escrow-first.** Funds are locked via Locus checkout sessions before work starts. Workers verify escrow via preflight. Payment releases only after delivery.

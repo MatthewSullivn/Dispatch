@@ -1,8 +1,8 @@
-# AGENTS.md — Agent Mesh
+# AGENTS.md — Dispatch
 
 ## What is this?
 
-Agent Mesh is an autonomous agent-to-agent service network where specialized AI agents hire and pay each other through Locus payment infrastructure on Base. Every payment flows in USDC, governed by spending controls, with a full audit trail.
+Dispatch is an autonomous agent-to-agent service network where specialized AI agents hire and pay each other through Locus payment infrastructure on Base. Every payment flows in USDC, governed by spending controls, with a full audit trail.
 
 ## Architecture
 

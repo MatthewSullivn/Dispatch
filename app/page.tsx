@@ -707,6 +707,8 @@ export default function Home() {
                 { name: "On-Chain Auditability", desc: "Every payment is a real USDC transfer on Base, verifiable on BaseScan.", tag: "bonus" },
                 { name: "Email Escrow Fallback", desc: "If checkout escrow fails, agents fall back to Locus email escrow.", tag: "bonus" },
                 { name: "Self-Registering Wallets", desc: "Agents self-register via Locus API. Setup script handles wallet deployment.", tag: "required" },
+                { name: "Checkout Webhooks", desc: "Real-time webhook notifications from Locus on escrow status changes. Drives live dashboard updates via SSE.", tag: "bonus" },
+                { name: "Direct Wallet Payments", desc: "Agent-to-agent USDC transfers via Locus sendPayment. Falls back from escrow when checkout sessions are unavailable.", tag: "core" },
               ].map(f => (
                 <div key={f.name} className="bg-black/90 p-4">
                   <div className="font-mono text-[10px] text-[#00d4aa] font-bold mb-1">[x]</div>
@@ -755,7 +757,7 @@ export default function Home() {
               {[
                 { num: "3", label: "Wallets" },
                 { num: "4", label: "Wrapped APIs" },
-                { num: "7", label: "Locus Features" },
+                { num: "9", label: "Locus Features" },
                 { num: "100%", label: "On-Chain" },
               ].map(s => (
                 <div key={s.label}>

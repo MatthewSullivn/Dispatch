@@ -128,7 +128,11 @@ const STEP_LABELS = [
 const STEP_DETAILS = ["Locus API","marketplace","lock funds","preflight","wrapped APIs","on-chain","quality gate","wrapped APIs","settlement"];
 
 /* ── Main Page ── */
-export default function Home() {
+export default function Page() {
+  return <ErrorBoundary><Home /></ErrorBoundary>;
+}
+
+function Home() {
   const [timeline, setTimeline] = useState<AgentEvent[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [escrows, setEscrows] = useState<Escrow[]>([]);
@@ -556,27 +560,11 @@ export default function Home() {
         {/* ── Agent Network ── */}
         {(running || hasRun) && <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-12">
           <div className="font-mono text-[10px] text-white/35 uppercase tracking-[3px] mb-5 text-center font-semibold">Agent Network</div>
-          <div className="flex items-center justify-center">
+          {/* Desktop: horizontal flow */}
+          <div className="hidden md:flex items-center justify-center">
             {agents.map((agent, i) => (
               <React.Fragment key={agent.id}>
-                <div className={`bg-white/8 border rounded-2xl p-5 min-w-[170px] text-center transition-all duration-500 relative overflow-hidden ${activeAgents.has(agent.id) ? "border-white/35" : "border-white/12 hover:border-white/20 hover:bg-white/10"} ${running ? "border-white/20" : ""}`} style={activeAgents.has(agent.id) ? { boxShadow: `0 0 30px ${agent.glowColor}15, 0 0 60px ${agent.glowColor}08` } : {}}>
-                  <div className="absolute top-0 left-[20%] right-[20%] h-px opacity-0 hover:opacity-100 transition-opacity" style={{ background: `linear-gradient(90deg, transparent, ${agent.glowColor}, transparent)` }} />
-                  <div className="flex items-center justify-center gap-1.5 mb-1">
-                    <span className={`w-1.5 h-1.5 rounded-full ${agent.dotColor} ${activeAgents.has(agent.id) ? "animate-pulse" : ""}`} />
-                    <span className="text-sm font-bold text-white/90">{agent.name}</span>
-                  </div>
-                  <div className="text-[11px] text-white/55 mt-1">{agent.role}</div>
-                  <div className="font-mono text-[15px] font-bold mt-3 text-white">
-                    {balances[agent.id]?.usdc_balance ? `${parseFloat(balances[agent.id].usdc_balance).toFixed(2)} USDC` : "--"}
-                  </div>
-                  {balances[agent.id]?.wallet_address && (
-                    <div className="font-mono text-[9px] text-white/30 mt-1">
-                      <a href={`https://basescan.org/address/${balances[agent.id].wallet_address}`} target="_blank" rel="noopener" className="text-white/30 no-underline hover:text-white/60 transition-colors">
-                        {balances[agent.id].wallet_address.slice(0, 6)}...{balances[agent.id].wallet_address.slice(-4)}
-                      </a>
-                    </div>
-                  )}
-                </div>
+                <AgentCard agent={agent} balances={balances} activeAgents={activeAgents} running={running} />
                 {i < 3 && (
                   <div className="px-2 text-center">
                     <div className={`w-8 h-px mx-auto relative ${arrowsOn ? "bg-white/30" : "bg-white/12"}`}>
@@ -589,6 +577,12 @@ export default function Home() {
                   </div>
                 )}
               </React.Fragment>
+            ))}
+          </div>
+          {/* Mobile: 2x2 grid */}
+          <div className="grid grid-cols-2 gap-2 md:hidden">
+            {agents.map((agent) => (
+              <AgentCard key={agent.id} agent={agent} balances={balances} activeAgents={activeAgents} running={running} />
             ))}
           </div>
         </motion.div>}
@@ -926,6 +920,30 @@ function Panel({ title, count, full, children }: { title: string; count?: number
   );
 }
 
+function AgentCard({ agent, balances, activeAgents, running }: { agent: { id: string; name: string; role: string; dotColor: string; glowColor: string }; balances: Record<string, any>; activeAgents: Set<string>; running: boolean }) {
+  const isActive = activeAgents.has(agent.id);
+  return (
+    <div className={`bg-white/8 border rounded-2xl p-5 min-w-0 md:min-w-[170px] text-center transition-all duration-500 relative overflow-hidden ${isActive ? "border-white/35" : "border-white/12 hover:border-white/20 hover:bg-white/10"} ${running ? "border-white/20" : ""}`} style={isActive ? { boxShadow: `0 0 30px ${agent.glowColor}15, 0 0 60px ${agent.glowColor}08` } : {}}>
+      <div className="absolute top-0 left-[20%] right-[20%] h-px opacity-0 hover:opacity-100 transition-opacity" style={{ background: `linear-gradient(90deg, transparent, ${agent.glowColor}, transparent)` }} />
+      <div className="flex items-center justify-center gap-1.5 mb-1">
+        <span className={`w-1.5 h-1.5 rounded-full ${agent.dotColor} ${isActive ? "animate-pulse" : ""}`} />
+        <span className="text-sm font-bold text-white/90">{agent.name}</span>
+      </div>
+      <div className="text-[11px] text-white/55 mt-1">{agent.role}</div>
+      <div className="font-mono text-[15px] font-bold mt-3 text-white">
+        {balances[agent.id]?.usdc_balance ? `${parseFloat(balances[agent.id].usdc_balance).toFixed(2)} USDC` : "--"}
+      </div>
+      {balances[agent.id]?.wallet_address && (
+        <div className="font-mono text-[9px] text-white/30 mt-1">
+          <a href={`https://basescan.org/address/${balances[agent.id].wallet_address}`} target="_blank" rel="noopener" className="text-white/30 no-underline hover:text-white/60 transition-colors">
+            {balances[agent.id].wallet_address.slice(0, 6)}...{balances[agent.id].wallet_address.slice(-4)}
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="text-white/40 text-center py-6 text-[11px] font-medium">{children}</div>;
 }
@@ -945,4 +963,27 @@ function FadeIn({ children }: { children: React.ReactNode }) {
       {children}
     </div>
   );
+}
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-black text-white/60">
+          <div className="text-center p-8 max-w-md">
+            <div className="text-4xl mb-4">&#9888;</div>
+            <h2 className="text-lg font-bold text-white/90 mb-2">Something went wrong</h2>
+            <p className="text-sm text-white/50 mb-4">{this.state.error.message}</p>
+            <button onClick={() => this.setState({ error: null })} className="px-5 py-2 bg-white/10 border border-white/20 rounded-full text-sm text-white/70 hover:bg-white/15 transition-colors">Try again</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }

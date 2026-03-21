@@ -50,7 +50,7 @@ Dispatch uses Locus as its core payment layer. Remove Locus and the entire produ
 
 **Spending Controls**: Configurable approval thresholds and allowance caps prevent agents from overspending. The orchestrator verifies its own balance before dispatching work.
 
-**Checkout Session Escrow**: Before any work begins, the orchestrator creates a Locus checkout session that locks funds. The worker agent verifies the escrow via preflight. Payment is only released after work is delivered.
+**Checkout Session Escrow (Task-Scoped Fund Isolation)**: Each subtask gets its own Locus checkout session, effectively creating task-scoped sub-wallets. Funds are locked per-task before work begins. The worker verifies via preflight. Payment releases only on delivery. This isolates funds per task — if one task fails, the other escrowed funds remain safe.
 
 **Pay-Per-Use Wrapped APIs**: Agents call external services (Exa, Firecrawl, Gemini, Grok) through Locus's wrapped API proxy. Each call is automatically billed in USDC to the calling agent's wallet -- no upstream API keys needed.
 
@@ -127,7 +127,11 @@ If escrow is unavailable, the system falls back to direct Locus wallet-to-wallet
 
 - **Rate limiting**: 15-second cooldown between goals, max 10 per hour
 - **CORS + API key auth**: Cross-origin protection and optional API key for write endpoints
-- **Unit tests**: Orchestrator pipeline tested with Node's built-in test runner (`npm test`)
+- **Unit tests**: 30+ tests covering orchestrator, validator, registry, config, and input validation (`npm test`)
+- **Security headers**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
+- **Per-IP rate limiting**: Each client tracked independently to prevent single-source abuse
+- **Error boundary**: React error boundary catches frontend crashes gracefully
+- **Dynamic task planning**: Complex multi-faceted goals automatically decomposed into parallel research queries
 - **Budget caps**: Hardcoded max $1.00 per goal, $0.25 per task
 - **Spending controls**: Locus approval threshold and allowance caps. Payments exceeding the threshold return an approval URL for human review, surfaced directly in the dashboard
 - **Balance verification**: Orchestrator checks its wallet before starting
@@ -139,7 +143,7 @@ If escrow is unavailable, the system falls back to direct Locus wallet-to-wallet
 ### Prerequisites
 
 - Node.js 18+
-- Three Locus agent wallets funded with USDC on Base
+- Four Locus agent wallets funded with USDC on Base
 
 ### Install
 

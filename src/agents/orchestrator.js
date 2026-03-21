@@ -350,11 +350,44 @@ class OrchestratorAgent extends BaseAgent {
     const validatePrice = this._getServicePrice('validation') || Math.min(this.budget.perTask * 0.5, 0.03);
     const writePrice = this._getServicePrice('writing') || Math.min(this.budget.perTask, DEFAULT_MAX_PRICE);
 
-    return [
-      { type: 'research', description: `Research: ${goal}`, query: goal, payment: researchPrice, status: 'pending' },
-      { type: 'validate', description: `Fact-check: ${goal}`, payment: validatePrice, status: 'pending' },
-      { type: 'write', description: `Synthesize report: ${goal}`, payment: writePrice, status: 'pending' },
-    ];
+    // Dynamic planning: complex goals with multiple facets get additional research passes
+    const researchQueries = this._decomposeResearchQueries(goal);
+    const tasks = [];
+
+    for (const query of researchQueries) {
+      tasks.push({ type: 'research', description: `Research: ${query}`, query, payment: researchPrice, status: 'pending' });
+    }
+    tasks.push({ type: 'validate', description: `Fact-check: ${goal}`, payment: validatePrice, status: 'pending' });
+    tasks.push({ type: 'write', description: `Synthesize report: ${goal}`, payment: writePrice, status: 'pending' });
+
+    return tasks;
+  }
+
+  /**
+   * Decompose a goal into research queries. Simple goals get one query;
+   * complex goals with conjunctions or multiple facets get parallel queries.
+   * Caps at 3 queries to stay within budget.
+   * @param {string} goal - User's objective
+   * @returns {string[]} Research queries
+   */
+  _decomposeResearchQueries(goal) {
+    // Split on common conjunctions that indicate multiple research angles
+    const separators = /\b(?:and|vs\.?|versus|compared to|comparing)\b/i;
+    const parts = goal.split(separators).map(s => s.trim()).filter(s => s.length > 5);
+
+    if (parts.length >= 2 && parts.length <= 3) {
+      // Budget check: can we afford multiple research passes?
+      const researchPrice = this._getServicePrice('research') || Math.min(this.budget.perTask, DEFAULT_MAX_PRICE);
+      const totalResearchCost = parts.length * researchPrice;
+      if (totalResearchCost <= this.budget.total * 0.6) {
+        this.log('dynamic_planning', {
+          reasoning: `Goal contains ${parts.length} distinct facets. Splitting into parallel research queries for comprehensive coverage.`,
+          queries: parts,
+        });
+        return parts;
+      }
+    }
+    return [goal];
   }
 
   /**

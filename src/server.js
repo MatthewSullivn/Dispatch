@@ -37,6 +37,16 @@ const REASONING_ACTIONS = new Set([
 const app = express();
 app.use(express.json({ limit: '100kb' }));
 
+// Security headers — prevent clickjacking, MIME sniffing, and XSS
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
 // CORS — allow dashboard origin, block unknown cross-origin requests
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -207,9 +217,20 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Rate limiting state
+// Rate limiting state — per-IP to prevent single-client abuse
 let lastGoalTime = 0;
 const goalHourWindow = [];
+const ipGoalCounts = new Map();
+
+// Clean stale IP entries every 10 minutes
+setInterval(() => {
+  const cutoff = Date.now() - RATE_LIMITS.oneHourMs;
+  for (const [ip, times] of ipGoalCounts) {
+    const valid = times.filter((t) => t > cutoff);
+    if (valid.length === 0) ipGoalCounts.delete(ip);
+    else ipGoalCounts.set(ip, valid);
+  }
+}, 600000);
 
 /** Submit a goal for the mesh to execute. Rate limited and budget-capped. */
 app.post('/api/goal', async (req, res) => {
@@ -234,6 +255,16 @@ app.post('/api/goal', async (req, res) => {
   if (goalHourWindow.length >= RATE_LIMITS.maxGoalsPerHour) {
     return res.status(429).json({ error: `Rate limited. Max ${RATE_LIMITS.maxGoalsPerHour} goals per hour.` });
   }
+
+  // Rate limit: per-IP tracking
+  const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+  const ipTimes = ipGoalCounts.get(clientIp) || [];
+  const recentIpGoals = ipTimes.filter(t => t > now - RATE_LIMITS.oneHourMs);
+  if (recentIpGoals.length >= RATE_LIMITS.maxGoalsPerHour) {
+    return res.status(429).json({ error: `Rate limited. Max ${RATE_LIMITS.maxGoalsPerHour} goals per hour per client.` });
+  }
+  recentIpGoals.push(now);
+  ipGoalCounts.set(clientIp, recentIpGoals);
 
   lastGoalTime = now;
   goalHourWindow.push(now);

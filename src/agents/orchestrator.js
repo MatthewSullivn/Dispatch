@@ -24,10 +24,10 @@ const MIN_BALANCE_USDC = BUDGET.minBalance;
 const DEFAULT_MAX_PRICE = BUDGET.defaultMaxPrice;
 
 // Task type to registry capability mapping
-const CAPABILITY_MAP = { research: 'research', write: 'writing' };
+const CAPABILITY_MAP = { research: 'research', validate: 'validation', write: 'writing' };
 
 // Task type to worker role mapping
-const ROLE_MAP = { research: 'researcher', write: 'writer' };
+const ROLE_MAP = { research: 'researcher', validate: 'validator', write: 'writer' };
 
 /**
  * Orchestrator agent — discovers workers, manages budget, and handles
@@ -230,6 +230,14 @@ class OrchestratorAgent extends BaseAgent {
           });
         }
         researchFindings.push(findings);
+      } else if (task.type === 'validate') {
+        const validation = await agent.validate(researchFindings);
+        results.validation = validation;
+        this.log('validation_result', {
+          validated: validation.validated,
+          provider: validation.provider,
+          reasoning: `Fact-check ${validation.validated ? 'completed' : 'skipped'} via ${validation.provider}. ${validation.sourcesChecked} sources checked.`,
+        });
       } else if (task.type === 'write') {
         results.report = await agent.synthesize(researchFindings);
       }
@@ -339,10 +347,12 @@ class OrchestratorAgent extends BaseAgent {
    */
   _planSubtasks(goal) {
     const researchPrice = this._getServicePrice('research') || Math.min(this.budget.perTask, DEFAULT_MAX_PRICE);
+    const validatePrice = this._getServicePrice('validation') || Math.min(this.budget.perTask * 0.5, 0.03);
     const writePrice = this._getServicePrice('writing') || Math.min(this.budget.perTask, DEFAULT_MAX_PRICE);
 
     return [
       { type: 'research', description: `Research: ${goal}`, query: goal, payment: researchPrice, status: 'pending' },
+      { type: 'validate', description: `Fact-check: ${goal}`, payment: validatePrice, status: 'pending' },
       { type: 'write', description: `Synthesize report: ${goal}`, payment: writePrice, status: 'pending' },
     ];
   }

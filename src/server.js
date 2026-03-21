@@ -23,6 +23,7 @@ const EscrowManager = require('./escrow');
 const OrchestratorAgent = require('./agents/orchestrator');
 const ResearchAgent = require('./agents/research-agent');
 const WriterAgent = require('./agents/writer-agent');
+const ValidatorAgent = require('./agents/validator-agent');
 
 // Actions that carry decision-making context for the reasoning log
 const REASONING_ACTIONS = new Set([
@@ -35,6 +36,34 @@ const REASONING_ACTIONS = new Set([
 
 const app = express();
 app.use(express.json({ limit: '100kb' }));
+
+// CORS — allow dashboard origin, block unknown cross-origin requests
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowed = [
+    `http://localhost:${SYSTEM.port}`,
+    SYSTEM.deployedUrl,
+  ].filter(Boolean);
+  if (!origin || allowed.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-API-Key');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
+// API key authentication for write endpoints (POST /api/goal)
+const API_KEY = process.env.DISPATCH_API_KEY || null;
+app.use('/api/goal', (req, res, next) => {
+  if (!API_KEY) return next(); // No key configured — open access
+  if (req.method !== 'POST') return next();
+  const key = req.headers['x-api-key'] || req.query.key;
+  if (key !== API_KEY) {
+    return res.status(401).json({ error: 'Invalid or missing API key.' });
+  }
+  next();
+});
 
 // Request timeout middleware — prevent long-running requests from hanging
 app.use((req, res, next) => {
@@ -87,7 +116,7 @@ function onApprovalNeeded(approval) {
 
 // ── Agent Initialization ─────────────────────────────────────────
 
-let orchestrator, researcher, writer;
+let orchestrator, researcher, writer, validator;
 
 /**
  * Create agents from config, register workers, and populate the
@@ -96,6 +125,7 @@ let orchestrator, researcher, writer;
 function initAgents() {
   const rConf = AGENTS.researcher;
   const wConf = AGENTS.writer;
+  const vConf = AGENTS.validator;
   const oConf = AGENTS.orchestrator;
 
   researcher = new ResearchAgent({
@@ -114,6 +144,14 @@ function initAgents() {
   });
   writer.agentEmail = wConf.email;
 
+  validator = new ValidatorAgent({
+    name: vConf.name,
+    locusApiKey: vConf.locusApiKey,
+    walletAddress: vConf.walletAddress,
+    onApprovalNeeded,
+  });
+  validator.agentEmail = vConf.email;
+
   orchestrator = new OrchestratorAgent({
     name: oConf.name,
     locusApiKey: oConf.locusApiKey,
@@ -125,16 +163,19 @@ function initAgents() {
 
   orchestrator.registerWorker(researcher);
   orchestrator.registerWorker(writer);
+  orchestrator.registerWorker(validator);
   orchestrator.setBudget(BUDGET.defaultTotal, BUDGET.defaultPerTask);
 
   // Register services from config
   if (rConf.service) researcher.registerService(registry, rConf.service);
   if (wConf.service) writer.registerService(registry, wConf.service);
+  if (vConf.service) validator.registerService(registry, vConf.service);
 
   console.log('Agents initialized:');
   console.log(`  Orchestrator: ${oConf.walletAddress}`);
   console.log(`  Researcher:   ${rConf.walletAddress}`);
   console.log(`  Writer:       ${wConf.walletAddress}`);
+  console.log(`  Validator:    ${vConf.walletAddress}`);
   console.log(`  Services:     ${registry.getAll().length} registered`);
 }
 
@@ -144,6 +185,7 @@ function allAgents() {
     { name: 'orchestrator', agent: orchestrator },
     { name: 'researcher', agent: researcher },
     { name: 'writer', agent: writer },
+    { name: 'validator', agent: validator },
   ];
 }
 
@@ -157,6 +199,7 @@ app.get('/api/health', (req, res) => {
       orchestrator: { name: orchestrator?.name, wallet: orchestrator?.walletAddress },
       researcher: { name: researcher?.name, wallet: researcher?.walletAddress },
       writer: { name: writer?.name, wallet: writer?.walletAddress },
+      validator: { name: validator?.name, wallet: validator?.walletAddress },
     },
     services: registry.getAll().length,
     escrows: escrowManager.getAll().length,
@@ -282,6 +325,7 @@ app.get('/api/audit', (req, res) => {
   const workerAudits = {};
   if (researcher) workerAudits.researcher = researcher.getAuditTrail();
   if (writer) workerAudits.writer = writer.getAuditTrail();
+  if (validator) workerAudits.validator = validator.getAuditTrail();
   res.json({
     orchestrator: orchestrator?.getAuditTrail(),
     workers: workerAudits,

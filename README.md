@@ -29,15 +29,14 @@ User submits goal
    - Worker agent verifies escrow via preflight check
         |
         v
-  [Researcher Agent]                    [Writer Agent]
-   - Searches via Exa (Locus wrapped)    - Synthesizes via Gemini (Locus wrapped)
-   - Scrapes via Firecrawl (Locus wrapped) - Falls back to Grok (Locus wrapped)
-   - All API calls billed in USDC          - All API calls billed in USDC
-        |                                       |
-        v                                       v
-  [Escrow Released]                     [Escrow Released]
-   - USDC payment confirmed on Base      - USDC payment confirmed on Base
-   - Transaction verifiable on BaseScan  - Transaction verifiable on BaseScan
+  [Researcher Agent]          [Validator Agent]          [Writer Agent]
+   - Searches via Exa           - Fact-checks findings     - Synthesizes via Gemini
+   - Scrapes via Firecrawl      - Rates confidence         - Falls back to Grok
+   - All calls billed USDC      - Quality gate             - All calls billed USDC
+        |                            |                          |
+        v                            v                          v
+  [Escrow Released]            [Escrow Released]          [Escrow Released]
+   - USDC on Base               - USDC on Base             - USDC on Base
         |
         v
   Report delivered with full audit trail
@@ -47,7 +46,7 @@ User submits goal
 
 Dispatch uses Locus as its core payment layer. Remove Locus and the entire product stops working.
 
-**Wallets**: Three autonomous agent wallets on Base, each with its own Locus API key. Agents hold, send, and receive USDC independently.
+**Wallets**: Four autonomous agent wallets on Base, each with its own Locus API key. Agents hold, send, and receive USDC independently.
 
 **Spending Controls**: Configurable approval thresholds and allowance caps prevent agents from overspending. The orchestrator verifies its own balance before dispatching work.
 
@@ -80,9 +79,12 @@ src/
     base-agent.js    Base class: wallet, payments, email escrow, API calls, audit trail
     orchestrator.js  Discovers agents, manages budget, escrows, dispatches work
     research-agent.js  Web search via Exa + Firecrawl (Locus wrapped APIs)
+    validator-agent.js Fact-checks research via Grok + Gemini (Locus wrapped APIs)
     writer-agent.js  Report synthesis via Gemini + Grok (Locus wrapped APIs)
-public/
-  index.html         Dashboard: agent network, timeline, escrows, transactions
+tests/
+  orchestrator.test.js  Unit tests for orchestrator (node --test)
+app/
+  page.tsx           Next.js / React dashboard with SSE, Framer Motion, Tailwind
 ```
 
 To add a new agent: define it in `config.js`, create its class extending `BaseAgent`, and register its service. The orchestrator will discover and hire it automatically.
@@ -93,6 +95,7 @@ To add a new agent: define it in `config.js`, create its class extending `BaseAg
 |-------|------|--------|--------------|
 | Orchestrator | Coordinator | Own Locus wallet | Discovers agents from registry, creates escrow, dispatches tasks, releases payment |
 | Researcher | Worker | Own Locus wallet | Searches the web via Exa and Firecrawl, returns structured findings |
+| Validator | Worker | Own Locus wallet | Fact-checks research findings for accuracy via Grok or Gemini |
 | Writer | Worker | Own Locus wallet | Synthesizes research into reports via Gemini or Grok |
 
 Each agent has its own Locus API key, wallet address, and USDC balance. The orchestrator pays workers; workers pay for their own API calls. All payments are real USDC on Base.
@@ -103,6 +106,7 @@ Agents advertise their capabilities and prices in a marketplace registry. The or
 
 ```
 Web Research       $0.05/task   [research, search, scrape, data-gathering]
+Fact Checking      $0.03/task   [validation, fact-checking, quality-assurance]
 Report Synthesis   $0.05/task   [writing, synthesis, report, summarization]
 ```
 
@@ -121,7 +125,9 @@ If escrow is unavailable, the system falls back to direct Locus wallet-to-wallet
 
 ## Safety
 
-- **Rate limiting**: 30-second cooldown between goals, max 10 per hour
+- **Rate limiting**: 15-second cooldown between goals, max 10 per hour
+- **CORS + API key auth**: Cross-origin protection and optional API key for write endpoints
+- **Unit tests**: Orchestrator pipeline tested with Node's built-in test runner (`npm test`)
 - **Budget caps**: Hardcoded max $1.00 per goal, $0.25 per task
 - **Spending controls**: Locus approval threshold and allowance caps. Payments exceeding the threshold return an approval URL for human review, surfaced directly in the dashboard
 - **Balance verification**: Orchestrator checks its wallet before starting

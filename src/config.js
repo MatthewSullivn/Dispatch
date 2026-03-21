@@ -45,6 +45,19 @@ const AGENTS = {
       capabilities: ['writing', 'synthesis', 'report', 'summarization'],
     },
   },
+  validator: {
+    name: 'MeshValidator',
+    role: 'validator',
+    locusApiKey: process.env.VALIDATOR_LOCUS_API_KEY || process.env.RESEARCHER_LOCUS_API_KEY,
+    walletAddress: process.env.VALIDATOR_WALLET_ADDRESS || process.env.RESEARCHER_WALLET_ADDRESS,
+    email: process.env.VALIDATOR_EMAIL || null,
+    service: {
+      name: 'Fact Checking',
+      description: 'Validate research findings for accuracy using Grok or Gemini LLMs via Locus wrapped APIs',
+      price: 0.03,
+      capabilities: ['validation', 'fact-checking', 'quality-assurance'],
+    },
+  },
 };
 
 // ── Rate Limiting ────────────────────────────────────────────────

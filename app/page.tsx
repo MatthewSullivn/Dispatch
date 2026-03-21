@@ -51,6 +51,7 @@ function agentCls(name: string): string {
   const n = name.toLowerCase();
   if (n.includes("orch")) return "text-[#ff6b6b]";
   if (n.includes("res")) return "text-[#4ecdc4]";
+  if (n.includes("val")) return "text-[#a78bfa]";
   if (n.includes("wri")) return "text-[#ffe66d]";
   if (n.includes("locus")) return "text-[#a78bfa]";
   return "text-white/40";
@@ -61,6 +62,7 @@ function agentBadgeCls(name: string): string {
   const n = name.toLowerCase();
   if (n.includes("orch")) return "bg-[#ff6b6b]/6 text-[#ff6b6b] border-[#ff6b6b]/8";
   if (n.includes("res")) return "bg-[#4ecdc4]/6 text-[#4ecdc4] border-[#4ecdc4]/8";
+  if (n.includes("val")) return "bg-[#a78bfa]/6 text-[#a78bfa] border-[#a78bfa]/8";
   if (n.includes("wri")) return "bg-[#ffe66d]/6 text-[#ffe66d] border-[#ffe66d]/8";
   return "bg-white/5 text-white/40 border-white/8";
 }
@@ -118,11 +120,12 @@ const STEP_LABELS = [
   "Create escrow via Locus checkout session",
   "Worker preflight — verify escrow is valid",
   "Researcher searches via Exa + Firecrawl",
-  "Release escrow — USDC payment on Base",
+  "Release escrow — pay researcher",
+  "Validator fact-checks research findings",
   "Writer synthesizes report via Gemini",
   "Release final payment — goal complete",
 ];
-const STEP_DETAILS = ["Locus API","marketplace","lock funds","preflight","wrapped APIs","on-chain","wrapped APIs","settlement"];
+const STEP_DETAILS = ["Locus API","marketplace","lock funds","preflight","wrapped APIs","on-chain","quality gate","wrapped APIs","settlement"];
 
 /* ── Main Page ── */
 export default function Home() {
@@ -144,7 +147,7 @@ export default function Home() {
   const [statusDetail, setStatusDetail] = useState("");
   const [showBanner, setShowBanner] = useState(false);
   const [showStepper, setShowStepper] = useState(false);
-  const [steps, setSteps] = useState<string[]>(Array(8).fill("waiting"));
+  const [steps, setSteps] = useState<string[]>(Array(9).fill("waiting"));
   const [totalSpent, setTotalSpent] = useState(0);
   const [taskCount, setTaskCount] = useState(0);
   const [report, setReport] = useState("");
@@ -286,13 +289,16 @@ export default function Home() {
       if (a === "escrow_verified") { set(3, "done"); set(4, "active"); }
       if (a === "exa_search_completed" || a === "firecrawl_search_completed" || a === "research_completed") set(4, "done");
       if (a === "escrow_released" && !stepDone6.current) { stepDone6.current = true; set(5, "done"); set(6, "active"); }
-      if (a === "synthesis_completed") set(6, "done");
-      if (a === "goal_completed") set(7, "done");
+      if (a === "validation_started") set(6, "active");
+      if (a === "validation_completed" || a === "validation_result") { set(6, "done"); set(7, "active"); }
+      if (a === "synthesis_completed") set(7, "done");
+      if (a === "goal_completed") set(8, "done");
       if (a === "goal_received") set(0, "active");
       if (a === "dispatching_task" && ev.task?.includes("Research")) set(4, "active");
-      if (a === "dispatching_task" && ev.task?.includes("Synth")) set(6, "active");
+      if (a === "dispatching_task" && ev.task?.includes("Fact")) set(6, "active");
+      if (a === "dispatching_task" && ev.task?.includes("Synth")) set(7, "active");
       if (a === "payment_initiated" || a === "payment_sent" || a === "payment_completed") {
-        if (stepDone6.current) set(7, "active"); else set(5, "active");
+        if (stepDone6.current) set(8, "active"); else set(5, "active");
       }
       return s;
     });
@@ -336,6 +342,7 @@ export default function Home() {
     let id = "";
     if (name.includes("orch")) id = "orchestrator";
     else if (name.includes("res")) id = "researcher";
+    else if (name.includes("val")) id = "validator";
     else if (name.includes("wri")) id = "writer";
     if (!id) return;
     setActiveAgents(prev => new Set(prev).add(id));
@@ -356,7 +363,7 @@ export default function Home() {
     setTimeline([]);
     setArrowsOn(true);
     stepDone6.current = false;
-    setSteps(Array(8).fill("waiting"));
+    setSteps(Array(9).fill("waiting"));
 
     try {
       const r = await fetch("/api/goal", {
@@ -401,6 +408,7 @@ export default function Home() {
   const agents = [
     { id: "orchestrator", key: "o", name: "Orchestrator", role: "Discovers, budgets, pays", dotColor: "bg-[#ff6b6b]", glowColor: "#ff6b6b" },
     { id: "researcher", key: "r", name: "Researcher", role: "Search + scrape via Locus", dotColor: "bg-[#4ecdc4]", glowColor: "#4ecdc4" },
+    { id: "validator", key: "v", name: "Validator", role: "Fact-check via Locus LLMs", dotColor: "bg-[#a78bfa]", glowColor: "#a78bfa" },
     { id: "writer", key: "w", name: "Writer", role: "Synthesize via Locus LLMs", dotColor: "bg-[#ffe66d]", glowColor: "#ffe66d" },
   ];
 
@@ -460,7 +468,7 @@ export default function Home() {
           >
             {[
               { step: "1", label: "Submit a goal", desc: "Pick a topic or type your own research question" },
-              { step: "2", label: "Agents coordinate", desc: "Orchestrator escrows USDC, hires researcher & writer" },
+              { step: "2", label: "Agents coordinate", desc: "Orchestrator escrows USDC, hires researcher, validator & writer" },
               { step: "3", label: "Get your report", desc: "Every payment tracked on-chain with full audit trail" },
             ].map(s => (
               <div key={s.step} className="flex-1">
@@ -551,7 +559,7 @@ export default function Home() {
           <div className="flex items-center justify-center">
             {agents.map((agent, i) => (
               <React.Fragment key={agent.id}>
-                <div className={`bg-white/8 border rounded-2xl p-6 min-w-[190px] text-center transition-all duration-400 relative overflow-hidden ${activeAgents.has(agent.id) ? "border-white/30" : "border-white/12 hover:border-white/20 hover:bg-white/10"} ${running ? "border-white/20 shadow-[0_0_40px_rgba(255,255,255,0.06)]" : ""}`}>
+                <div className={`bg-white/8 border rounded-2xl p-5 min-w-[170px] text-center transition-all duration-500 relative overflow-hidden ${activeAgents.has(agent.id) ? "border-white/35" : "border-white/12 hover:border-white/20 hover:bg-white/10"} ${running ? "border-white/20" : ""}`} style={activeAgents.has(agent.id) ? { boxShadow: `0 0 30px ${agent.glowColor}15, 0 0 60px ${agent.glowColor}08` } : {}}>
                   <div className="absolute top-0 left-[20%] right-[20%] h-px opacity-0 hover:opacity-100 transition-opacity" style={{ background: `linear-gradient(90deg, transparent, ${agent.glowColor}, transparent)` }} />
                   <div className="flex items-center justify-center gap-1.5 mb-1">
                     <span className={`w-1.5 h-1.5 rounded-full ${agent.dotColor} ${activeAgents.has(agent.id) ? "animate-pulse" : ""}`} />
@@ -569,12 +577,15 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-                {i < 2 && (
-                  <div className="px-3 text-center">
-                    <div className={`w-10 h-px mx-auto relative ${arrowsOn ? "bg-white/30" : "bg-white/12"}`}>
+                {i < 3 && (
+                  <div className="px-2 text-center">
+                    <div className={`w-8 h-px mx-auto relative ${arrowsOn ? "bg-white/30" : "bg-white/12"}`}>
                       <span className={`absolute right-[-4px] top-[-2px] w-0 h-0 border-l-[5px] border-t-[3px] border-b-[3px] border-t-transparent border-b-transparent ${arrowsOn ? "border-l-white/40" : "border-l-white/20"}`} />
+                      {arrowsOn && (
+                        <span className="absolute top-[-2px] left-0 w-1.5 h-1.5 rounded-full bg-[#00d4aa] animate-[flowRight_1.2s_ease-in-out_infinite]" style={{ animationDelay: `${i * 0.4}s` }} />
+                      )}
                     </div>
-                    <span className={`font-mono text-[8px] font-semibold tracking-widest uppercase mt-1 block ${arrowsOn ? "text-white/50" : "text-white/25"}`}>USDC</span>
+                    <span className={`font-mono text-[7px] font-semibold tracking-widest uppercase mt-1 block ${arrowsOn ? "text-[#00d4aa]/60" : "text-white/25"}`}>USDC</span>
                   </div>
                 )}
               </React.Fragment>
@@ -589,7 +600,7 @@ export default function Home() {
             {STEP_LABELS.map((label, i) => {
               const state = steps[i];
               return (
-                <div key={i} className={`flex items-center gap-3 py-2 ${i < 7 ? "border-b border-white/5" : ""}`}>
+                <div key={i} className={`flex items-center gap-3 py-2 ${i < 8 ? "border-b border-white/5" : ""}`}>
                   <div className={`w-[22px] h-[22px] rounded-full flex items-center justify-center font-mono text-[9px] font-bold shrink-0 transition-all ${
                     state === "done" ? "bg-[#00d4aa]/15 border border-[#00d4aa]/25 text-[#00d4aa]" :
                     state === "active" ? "bg-white/15 border border-white/30 text-white animate-pulse" :
@@ -815,7 +826,7 @@ export default function Home() {
             <div className="font-mono text-[10px] text-white/35 uppercase tracking-[3px] mb-5 text-center font-semibold">Locus Integration</div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-px bg-white/8 rounded-xl overflow-hidden">
               {[
-                { name: "Agent Wallets", desc: "3 autonomous Locus wallets on Base. Agents hold, send, and receive USDC independently.", tag: "core" },
+                { name: "Agent Wallets", desc: "4 autonomous Locus wallets on Base. Agents hold, send, and receive USDC independently.", tag: "core" },
                 { name: "Checkout Session Escrow", desc: "Funds locked via checkout sessions. Worker preflight verifies. Payment released on delivery.", tag: "bonus" },
                 { name: "Pay-Per-Use Wrapped APIs", desc: "Exa, Firecrawl, Gemini, Grok through Locus. Each call billed in USDC.", tag: "bonus" },
                 { name: "Spending Controls", desc: "Approval thresholds and allowance caps. Payments above threshold require human approval.", tag: "bonus" },
@@ -870,7 +881,7 @@ export default function Home() {
 
             <div className="flex justify-center gap-14">
               {[
-                { num: "3", label: "Wallets" },
+                { num: "4", label: "Wallets" },
                 { num: "4", label: "Wrapped APIs" },
                 { num: "9", label: "Locus Features" },
                 { num: "100%", label: "On-Chain" },

@@ -15,12 +15,13 @@
  * No funds move until work is delivered.
  */
 const BaseAgent = require('./base-agent');
+const { BUDGET } = require('../config');
 
 // Minimum USDC balance required to start a goal
-const MIN_BALANCE_USDC = 0.01;
+const MIN_BALANCE_USDC = BUDGET.minBalance;
 
 // Default price cap when no registry price is available
-const DEFAULT_MAX_PRICE = 0.5;
+const DEFAULT_MAX_PRICE = BUDGET.defaultMaxPrice;
 
 // Task type to registry capability mapping
 const CAPABILITY_MAP = { research: 'research', write: 'writing' };
@@ -131,7 +132,11 @@ class OrchestratorAgent extends BaseAgent {
       }
     } catch (err) {
       if (err.message.includes('too low')) throw err;
-      // Balance check API failed — don't block execution
+      // Balance check API failed — log warning but continue with caution
+      this.log('balance_check_warning', {
+        error: err.message,
+        reasoning: 'Could not verify wallet balance via Locus API. Proceeding with caution — payments may fail if balance is insufficient.',
+      });
     }
   }
 
@@ -218,6 +223,12 @@ class OrchestratorAgent extends BaseAgent {
     try {
       if (task.type === 'research') {
         const findings = await agent.research(task.query);
+        if (!findings.scrapedData && !findings.searchResults && !findings.supplementaryResults) {
+          this.log('research_empty', {
+            query: task.query,
+            reasoning: 'All research providers returned empty results. Report quality may be degraded.',
+          });
+        }
         researchFindings.push(findings);
       } else if (task.type === 'write') {
         results.report = await agent.synthesize(researchFindings);
@@ -237,36 +248,53 @@ class OrchestratorAgent extends BaseAgent {
    * Marks task status based on outcome.
    */
   async _releasePayment(task, agent, escrowSession) {
-    try {
-      if (escrowSession?.sessionId) {
-        await this.escrowManager.releasePayment(this.locus, escrowSession.sessionId);
-      } else {
-        await this.payAgent(agent.walletAddress, task.payment, task.description);
-      }
-      this.budget.spent += task.payment;
-      task.status = 'completed';
-    } catch (err) {
-      // Fallback: email escrow if agent has an email
-      if (agent.agentEmail) {
-        try {
-          await this.payAgentViaEmail(agent.agentEmail, task.payment, task.description);
-          this.budget.spent += task.payment;
-          task.status = 'completed_via_email';
-          return;
-        } catch (emailErr) {
-          this.log('payment_failed', {
-            error: emailErr.message,
-            task: task.description,
-            reasoning: 'All payment methods exhausted: checkout escrow, direct wallet, and email escrow all failed.',
-          });
-          task.status = 'work_done_unpaid';
-          task.error = emailErr.message;
-          return;
+    const MAX_RETRIES = 1;
+    const RETRY_DELAY = 2000;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (escrowSession?.sessionId) {
+          await this.escrowManager.releasePayment(this.locus, escrowSession.sessionId);
+        } else {
+          await this.payAgent(agent.walletAddress, task.payment, task.description);
         }
+        this.budget.spent += task.payment;
+        task.status = 'completed';
+        return;
+      } catch (err) {
+        if (attempt < MAX_RETRIES) {
+          this.log('payment_retry', {
+            attempt: attempt + 1,
+            error: err.message,
+            task: task.description,
+            reasoning: `Payment attempt ${attempt + 1} failed, retrying in ${RETRY_DELAY}ms...`,
+          });
+          await new Promise(r => setTimeout(r, RETRY_DELAY));
+          continue;
+        }
+
+        // Exhausted retries — try email escrow fallback
+        if (agent.agentEmail) {
+          try {
+            await this.payAgentViaEmail(agent.agentEmail, task.payment, task.description);
+            this.budget.spent += task.payment;
+            task.status = 'completed_via_email';
+            return;
+          } catch (emailErr) {
+            this.log('payment_failed', {
+              error: emailErr.message,
+              task: task.description,
+              reasoning: 'All payment methods exhausted after retry: checkout escrow, direct wallet, and email escrow all failed.',
+            });
+            task.status = 'work_done_unpaid';
+            task.error = emailErr.message;
+            return;
+          }
+        }
+        this.log('payment_failed', { error: err.message, task: task.description });
+        task.status = 'work_done_unpaid';
+        task.error = err.message;
       }
-      this.log('payment_failed', { error: err.message, task: task.description });
-      task.status = 'work_done_unpaid';
-      task.error = err.message;
     }
   }
 

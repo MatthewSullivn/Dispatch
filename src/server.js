@@ -34,7 +34,16 @@ const REASONING_ACTIONS = new Set([
 // ── App Setup ────────────────────────────────────────────────────
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
+
+// Request timeout middleware — prevent long-running requests from hanging
+app.use((req, res, next) => {
+  res.setTimeout(120000, () => {
+    if (!res.headersSent) res.status(504).json({ error: 'Request timeout' });
+  });
+  next();
+});
+
 // Serve Next.js static export (out/) if it exists, otherwise fall back to public/
 const fs = require('fs');
 const outDir = path.join(__dirname, '..', 'out');
@@ -164,6 +173,10 @@ app.post('/api/goal', async (req, res) => {
   const { goal, budget, maxPerTask } = req.body;
   if (!goal || typeof goal !== 'string') return res.status(400).json({ error: 'goal is required' });
   if (goal.length > SYSTEM.maxGoalLength) return res.status(400).json({ error: `goal must be under ${SYSTEM.maxGoalLength} characters` });
+  if (budget !== undefined && (!Number.isFinite(Number(budget)) || Number(budget) <= 0))
+    return res.status(400).json({ error: 'budget must be a positive number' });
+  if (maxPerTask !== undefined && (!Number.isFinite(Number(maxPerTask)) || Number(maxPerTask) <= 0))
+    return res.status(400).json({ error: 'maxPerTask must be a positive number' });
 
   const now = Date.now();
 
@@ -194,7 +207,7 @@ app.post('/api/goal', async (req, res) => {
     res.json({ success: true, goal, report: results.report, audit: results.audit });
   } catch (err) {
     console.error('Goal failed:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Goal execution failed. Check server logs for details.' });
   }
 });
 
@@ -206,7 +219,7 @@ app.get('/api/balances', async (req, res) => {
       const bal = await agent.getBalance();
       balances[name] = bal.data?.data || bal.data;
     } catch (err) {
-      balances[name] = { error: err.message };
+      balances[name] = { error: 'Balance check failed' };
     }
   }));
   res.json({ balances });
@@ -221,6 +234,7 @@ app.get('/api/registry', (req, res) => {
 app.get('/api/registry/discover', (req, res) => {
   const { q } = req.query;
   if (!q) return res.status(400).json({ error: 'q parameter required' });
+  if (typeof q !== 'string' || q.length > 200) return res.status(400).json({ error: 'query must be a string under 200 characters' });
   res.json({ results: registry.discover(q) });
 });
 
@@ -311,7 +325,8 @@ app.get('/api/transactions', async (req, res) => {
     all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     res.json({ transactions: all });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Transaction fetch failed:', err);
+    res.status(500).json({ error: 'Failed to fetch transactions.' });
   }
 });
 
@@ -319,6 +334,15 @@ app.get('/api/transactions', async (req, res) => {
 app.get('*', (req, res) => {
   const staticRoot = fs.existsSync(outDir) ? outDir : publicDir;
   res.sendFile(path.join(staticRoot, 'index.html'));
+});
+
+// ── Centralized Error Handler ─────────────────────────────────────
+
+app.use((err, _req, res, _next) => {
+  console.error('Unhandled error:', err);
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'An internal error occurred.' });
+  }
 });
 
 // ── Start ────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { CanvasRevealEffect, MiniNavbar } from "@/components/ui/sign-in-flow-1";
+import { CanvasRevealEffect, MiniNavbar } from "@/components/ui/canvas-effects";
 
 /* ── Helpers ── */
 function esc(str: any): string {
@@ -39,7 +39,10 @@ function inlineMd(s: string): string {
     .replace(/`([^`]+)`/g, '<code class="bg-white/5 px-1.5 py-0.5 rounded text-white/70 font-mono text-xs">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white/80">$1</strong>')
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-white/60 underline underline-offset-2 decoration-white/15 hover:text-white">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
+      const safeUrl = /^https?:\/\//.test(url) ? url : '#';
+      return `<a href="${safeUrl}" target="_blank" rel="noopener" class="text-white/60 underline underline-offset-2 decoration-white/15 hover:text-white">${text}</a>`;
+    })
     .replace(/\n/g, "<br>");
 }
 
@@ -71,6 +74,8 @@ function eventIconColor(action: string, type: string): string {
   return "text-white/30";
 }
 
+const LOCUS_API_WALLET = "0x3c5cbe28eca3b96023c45d3f877da834f1c7d5fa";
+
 /* ── Types ── */
 interface AgentEvent {
   timestamp: string;
@@ -99,12 +104,12 @@ interface AgentEvent {
 interface Service { serviceName: string; description: string; capabilities: string[]; agentName: string; price: number; }
 interface Escrow { sessionId: string; status: string; amount: number; buyerAgent: string; sellerAgent: string; description?: string; createdAt?: string; paidAt?: string; checkoutUrl?: string; }
 interface Transaction { _agent: string; to_address: string; memo: string; amount_usdc: number; status: string; tx_hash?: string; created_at: string; }
-interface Approval { agent: string; amount: string; task: string; }
+interface Approval { agent: string; amount: string; task: string; approvalUrl?: string; }
 interface ReasonEntry { agent: string; action: string; reasoning?: string; goal?: string; task?: string; description?: string; amount?: number; }
 
 const HIDDEN_ACTIONS = new Set([
   "escrow_failed","escrow_fallback","escrow_creating",
-  "synthesis_provider_failed","payment_pending_approval","approval_required",
+  "synthesis_provider_failed","payment_pending_approval",
 ]);
 
 const STEP_LABELS = [
@@ -144,8 +149,12 @@ export default function Home() {
   const [taskCount, setTaskCount] = useState(0);
   const [report, setReport] = useState("");
   const [reportLoading, setReportLoading] = useState(false);
+  const [reportHistory, setReportHistory] = useState<{ goal: string; report: string; timestamp: string; spent: number }[]>([]);
+  const [viewingHistoryIdx, setViewingHistoryIdx] = useState<number | null>(null);
   const [activeAgents, setActiveAgents] = useState<Set<string>>(new Set());
   const [arrowsOn, setArrowsOn] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const stepDone6 = useRef(false);
   const tlRef = useRef<HTMLDivElement>(null);
 
@@ -153,49 +162,55 @@ export default function Home() {
   const loadBalances = useCallback(async () => {
     try {
       const r = await fetch("/api/balances");
+      if (!r.ok) return;
       const d = await r.json();
       setBalances(d.balances || {});
-    } catch {}
+    } catch { /* network error — balances will show stale data */ }
   }, []);
 
   const loadServices = useCallback(async () => {
     try {
       const r = await fetch("/api/registry");
+      if (!r.ok) return;
       const d = await r.json();
       setServices(d.services || []);
-    } catch {}
+    } catch { /* network error */ }
   }, []);
 
   const loadEscrows = useCallback(async () => {
     try {
       const r = await fetch("/api/escrows");
+      if (!r.ok) return;
       const d = await r.json();
       setEscrows(d.escrows || []);
-    } catch {}
+    } catch { /* network error */ }
   }, []);
 
   const loadTransactions = useCallback(async () => {
     try {
       const r = await fetch("/api/transactions");
+      if (!r.ok) return;
       const d = await r.json();
       setTransactions(d.transactions || []);
-    } catch {}
+    } catch { /* network error */ }
   }, []);
 
   const loadApprovals = useCallback(async () => {
     try {
       const r = await fetch("/api/approvals");
+      if (!r.ok) return;
       const d = await r.json();
       setApprovals(d.approvals || []);
-    } catch {}
+    } catch { /* network error */ }
   }, []);
 
   const loadReasoning = useCallback(async () => {
     try {
       const r = await fetch("/api/reasoning");
+      if (!r.ok) return;
       const d = await r.json();
       setReasoning(d.reasoning || []);
-    } catch {}
+    } catch { /* network error */ }
   }, []);
 
   /* ── Wallet names ── */
@@ -203,8 +218,9 @@ export default function Home() {
     (async () => {
       try {
         const r = await fetch("/api/agents");
+        if (!r.ok) return;
         const d = await r.json();
-        const names: Record<string, string> = { "0x3c5cbe28eca3b96023c45d3f877da834f1c7d5fa": "Locus API" };
+        const names: Record<string, string> = { [LOCUS_API_WALLET]: "Locus API" };
         d.agents.forEach((a: any) => {
           if (a.wallet) {
             names[a.wallet.toLowerCase()] = a.role.charAt(0).toUpperCase() + a.role.slice(1);
@@ -212,7 +228,7 @@ export default function Home() {
           }
         });
         setWalletNames(names);
-      } catch {}
+      } catch { /* network error */ }
     })();
   }, []);
 
@@ -311,7 +327,7 @@ export default function Home() {
       setStatusDetail(cfg.detail);
     }
     if (ev.action === "goal_completed") {
-      setTimeout(() => setShowBanner(false), 8000);
+      setTimeout(() => setShowBanner(false), 15000);
     }
   }
 
@@ -355,6 +371,9 @@ export default function Home() {
         let rpt = data.report?.report || "No report generated.";
         try { const p = JSON.parse(rpt); rpt = p?.data?.choices?.[0]?.message?.content || p?.choices?.[0]?.message?.content || rpt; } catch {}
         setReport(rpt);
+        setReportHistory(prev => [{ goal: goal.trim(), report: rpt, timestamp: new Date().toLocaleTimeString(), spent: s?.totalSpent || 0 }, ...prev]);
+        setViewingHistoryIdx(null);
+        setGoal("");
         setStatus("done");
       } else {
         setReport(data.error || "Failed");
@@ -368,6 +387,9 @@ export default function Home() {
     setRunning(false);
     setReportLoading(false);
     setArrowsOn(false);
+    setHasRun(true);
+    setCooldown(15);
+    const cd = setInterval(() => setCooldown(prev => { if (prev <= 1) { clearInterval(cd); return 0; } return prev - 1; }), 1000);
     setActiveAgents(new Set());
     loadBalances();
     loadEscrows();
@@ -413,7 +435,7 @@ export default function Home() {
           transition={{ duration: 0.6 }}
           className="text-center pt-28 pb-10"
         >
-          <h1 className="text-7xl font-black tracking-[-4px] leading-[0.9] text-white">
+          <h1 className="text-8xl font-black tracking-[-2px] leading-[0.9] text-white italic" style={{ fontFamily: 'var(--font-playfair)' }}>
             Dispatch
           </h1>
           <p className="text-[17px] text-white/60 mt-5 leading-relaxed font-normal max-w-[520px] mx-auto">
@@ -427,6 +449,28 @@ export default function Home() {
             ))}
           </div>
         </motion.div>
+
+        {/* ── How It Works (visible before first run) ── */}
+        {!hasRun && !running && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex justify-center gap-8 mb-10 text-center max-w-[700px] mx-auto"
+          >
+            {[
+              { step: "1", label: "Submit a goal", desc: "Pick a topic or type your own research question" },
+              { step: "2", label: "Agents coordinate", desc: "Orchestrator escrows USDC, hires researcher & writer" },
+              { step: "3", label: "Get your report", desc: "Every payment tracked on-chain with full audit trail" },
+            ].map(s => (
+              <div key={s.step} className="flex-1">
+                <div className="w-7 h-7 rounded-full bg-white/10 border border-white/15 flex items-center justify-center mx-auto mb-2 text-[11px] font-bold text-white/60 font-mono">{s.step}</div>
+                <div className="text-[12px] font-semibold text-white/80 mb-0.5">{s.label}</div>
+                <div className="text-[11px] text-white/40 leading-snug">{s.desc}</div>
+              </div>
+            ))}
+          </motion.div>
+        )}
 
         {/* ── Goal Input ── */}
         <motion.div
@@ -454,11 +498,11 @@ export default function Home() {
             />
             <button
               onClick={runGoal}
-              disabled={running}
+              disabled={running || cooldown > 0}
               className="relative bg-white text-black border-none rounded-full px-7 py-3 font-bold text-[13px] tracking-wide uppercase whitespace-nowrap shrink-0 cursor-pointer transition-all hover:bg-white/85 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-15 disabled:cursor-not-allowed group"
             >
               <div className="absolute inset-[-6px] rounded-full bg-white/8 blur-[16px] opacity-0 group-hover:opacity-100 transition-opacity -z-10" />
-              {running ? "RUNNING..." : "RUN DISPATCH"}
+              {running ? "RUNNING..." : cooldown > 0 ? `WAIT ${cooldown}s` : "RUN DISPATCH"}
             </button>
           </div>
           <div className="flex gap-6 mt-3 justify-center text-xs text-white/50 font-medium">
@@ -469,30 +513,40 @@ export default function Home() {
 
         {/* ── Status Banner ── */}
         {showBanner && (
-          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/6 border border-white/10 mb-6 text-xs text-white/60">
-            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
-            <span className="text-white font-bold">{statusPhase}</span> {statusDetail}
+          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-full mb-6 text-xs ${status === "done" ? "bg-[#00d4aa]/8 border border-[#00d4aa]/20 text-[#00d4aa]/80" : status === "error" ? "bg-[#ff6b6b]/8 border border-[#ff6b6b]/20 text-[#ff6b6b]/80" : "bg-white/6 border border-white/10 text-white/60"}`}>
+            {status === "done" ? (
+              <span className="text-[#00d4aa] text-xs shrink-0">&#10003;</span>
+            ) : status === "error" ? (
+              <span className="text-[#ff6b6b] text-xs shrink-0">&#10007;</span>
+            ) : (
+              <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
+            )}
+            <span className={`font-bold ${status === "done" ? "text-[#00d4aa]" : status === "error" ? "text-[#ff6b6b]" : "text-white"}`}>{statusPhase}</span> {statusDetail}
+            {status === "done" && <span className="ml-auto font-mono text-[10px] text-[#00d4aa]/60">${totalSpent.toFixed(2)} spent &middot; {taskCount} tasks</span>}
           </motion.div>
         )}
 
         {/* ── Stats ── */}
-        <div className="flex justify-center mb-8 text-xs">
+        {(running || hasRun) && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center mb-8 text-xs">
           {[
             { label: "Status", value: status },
-            { label: "Budget", value: running ? `$${budget.toFixed(2)}` : "--" },
+            { label: "Budget", value: `$${budget.toFixed(2)}` },
             { label: "Spent", value: `$${totalSpent.toFixed(2)}`, red: true },
+            { label: "Remaining", value: `$${Math.max(0, budget - totalSpent).toFixed(2)}`, green: true },
             { label: "Tasks", value: String(taskCount) },
             { label: "Escrows", value: String(escrows.length) },
-          ].map((s, i) => (
-            <div key={s.label} className={`flex gap-1.5 items-center px-5 ${i < 4 ? "border-r border-white/6" : ""}`}>
+          ].map((s: any, i: number) => (
+            <div key={s.label} className={`flex gap-1.5 items-center px-5 ${i < 5 ? "border-r border-white/6" : ""}`}>
               <span className="text-white/45 text-[10px] font-semibold uppercase tracking-widest">{s.label}</span>
-              <span className={`font-mono font-bold text-xs ${s.red ? "text-[#ff6b6b]" : "text-white/80"}`}>{s.value}</span>
+              <span className={`font-mono font-bold text-xs ${s.red ? "text-[#ff6b6b]" : s.green ? "text-[#00d4aa]" : "text-white/80"}`}>{s.value}</span>
             </div>
           ))}
-        </div>
+        </motion.div>
+        )}
 
         {/* ── Agent Network ── */}
-        <div className="mb-12">
+        {(running || hasRun) && <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-12">
           <div className="font-mono text-[10px] text-white/35 uppercase tracking-[3px] mb-5 text-center font-semibold">Agent Network</div>
           <div className="flex items-center justify-center">
             {agents.map((agent, i) => (
@@ -526,7 +580,7 @@ export default function Home() {
               </React.Fragment>
             ))}
           </div>
-        </div>
+        </motion.div>}
 
         {/* ── Stepper ── */}
         {showStepper && (
@@ -553,7 +607,7 @@ export default function Home() {
         )}
 
         {/* ── Panels ── */}
-        <div className="grid grid-cols-2 gap-3 mb-12 max-md:grid-cols-1">
+        {(running || hasRun) && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="grid grid-cols-2 gap-3 mb-12 max-md:grid-cols-1">
           {/* Timeline - full width */}
           <Panel title="Live Timeline" count={timeline.length} full>
             <div ref={tlRef} className="max-h-[380px] overflow-y-auto space-y-0 scrollbar-thin">
@@ -631,15 +685,70 @@ export default function Home() {
           </Panel>
 
           {/* Report - full width */}
-          <Panel title="Report Output" full>
-            {reportLoading ? (
-              <div className="text-white/15 text-center py-6 text-[11px] font-medium animate-pulse">agents are researching and synthesizing...</div>
-            ) : report ? (
-              <div className="text-sm leading-relaxed text-white/50 prose-invert" dangerouslySetInnerHTML={{ __html: renderMarkdown(report) }} />
-            ) : (
-              <Empty>submit a goal to see the synthesized report</Empty>
+          <div className="bg-white/[0.05] border border-white/12 rounded-2xl overflow-hidden transition-colors hover:border-white/20 col-span-full">
+            <div className="px-4 py-3 text-[10px] uppercase tracking-[2px] border-b border-white/10 font-bold flex items-center gap-2 text-white/60">
+              Report Output
+              {reportHistory.length > 0 && (
+                <span className="bg-white/10 px-2 py-0.5 rounded-full text-[10px] font-mono text-white/50">{reportHistory.length}</span>
+              )}
+              <div className="ml-auto flex items-center gap-2">
+                {(viewingHistoryIdx !== null ? reportHistory[viewingHistoryIdx]?.report : report) && (
+                  <button
+                    onClick={() => {
+                      const content = viewingHistoryIdx !== null ? reportHistory[viewingHistoryIdx]?.report : report;
+                      if (!content) return;
+                      const blob = new Blob([content], { type: "text/markdown" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `dispatch-report-${new Date().toISOString().slice(0, 10)}.md`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="text-[10px] text-white/40 hover:text-white/70 transition-colors px-2 py-0.5 rounded-full border border-white/10 hover:border-white/25 normal-case tracking-normal font-medium"
+                  >
+                    Download .md
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* History tabs */}
+            {reportHistory.length > 1 && (
+              <div className="flex gap-1 px-3 pt-2 pb-1 overflow-x-auto border-b border-white/5">
+                <button
+                  onClick={() => setViewingHistoryIdx(null)}
+                  className={`shrink-0 text-[10px] px-3 py-1 rounded-full transition-colors ${viewingHistoryIdx === null ? "bg-white/15 text-white/80" : "text-white/35 hover:text-white/60 hover:bg-white/5"}`}
+                >
+                  Latest
+                </button>
+                {reportHistory.slice(1).map((h, i) => (
+                  <button
+                    key={i + 1}
+                    onClick={() => setViewingHistoryIdx(i + 1)}
+                    className={`shrink-0 text-[10px] px-3 py-1 rounded-full transition-colors truncate max-w-[180px] ${viewingHistoryIdx === i + 1 ? "bg-white/15 text-white/80" : "text-white/35 hover:text-white/60 hover:bg-white/5"}`}
+                  >
+                    {h.goal.slice(0, 40)}{h.goal.length > 40 ? "..." : ""} &middot; {h.timestamp}
+                  </button>
+                ))}
+              </div>
             )}
-          </Panel>
+            <div className="p-4 max-h-[520px] overflow-y-auto text-xs leading-relaxed scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/15">
+              {reportLoading ? (
+                <div className="text-white/15 text-center py-8 text-[11px] font-medium animate-pulse">agents are researching and synthesizing...</div>
+              ) : (() => {
+                const activeReport = viewingHistoryIdx !== null ? reportHistory[viewingHistoryIdx]?.report : report;
+                const activeGoal = viewingHistoryIdx !== null ? reportHistory[viewingHistoryIdx]?.goal : null;
+                return activeReport ? (
+                  <div>
+                    {activeGoal && <div className="text-[10px] text-white/30 mb-3 font-mono">Goal: {activeGoal}</div>}
+                    <div className="text-sm leading-relaxed text-white/50 prose-invert" dangerouslySetInnerHTML={{ __html: renderMarkdown(activeReport) }} />
+                  </div>
+                ) : (
+                  <Empty>submit a goal to see the synthesized report</Empty>
+                );
+              })()}
+            </div>
+          </div>
 
           {/* Spending Controls */}
           <Panel title="Spending Controls" count={approvals.length}>
@@ -653,6 +762,12 @@ export default function Home() {
                   </div>
                   <div className="text-[11px] text-white/35 mt-1">{a.task}</div>
                   <div className="text-[9px] text-white/20 mt-1.5 font-semibold uppercase tracking-wide">Held by Locus</div>
+                  {a.approvalUrl && (
+                    <a href={a.approvalUrl} target="_blank" rel="noopener"
+                      className="inline-block mt-2 text-[10px] font-bold text-[#ffe66d] underline underline-offset-2 decoration-[#ffe66d]/30 hover:text-white transition-colors">
+                      Review &amp; Approve
+                    </a>
+                  )}
                 </div>
               ))}
             </>}
@@ -673,7 +788,7 @@ export default function Home() {
               ))
             }
           </Panel>
-        </div>
+        </motion.div>}
 
         {/* ── Divider ── */}
         <div className="h-px bg-gradient-to-r from-transparent via-white/6 to-transparent my-14" />

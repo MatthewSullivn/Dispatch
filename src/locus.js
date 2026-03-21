@@ -12,9 +12,11 @@
  * @see https://docs.paywithlocus.com
  */
 
-const BASE_URL = 'https://api.paywithlocus.com/api';
-const BETA_URL = 'https://beta-api.paywithlocus.com/api';
-const STATUS_PENDING_APPROVAL = 202;
+const { LOCUS } = require('./config');
+
+const BASE_URL = LOCUS.baseUrl;
+const BETA_URL = LOCUS.betaUrl;
+const STATUS_PENDING_APPROVAL = LOCUS.statusPendingApproval;
 
 /**
  * Authenticated client for a single Locus agent wallet.
@@ -40,7 +42,7 @@ class LocusClient {
       'Authorization': `Bearer ${this.apiKey}`,
       'Content-Type': 'application/json',
     };
-    const options = { method, headers };
+    const options = { method, headers, signal: AbortSignal.timeout(30000) };
     if (body) options.body = JSON.stringify(body);
 
     const res = await fetch(url, options);

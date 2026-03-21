@@ -50,7 +50,7 @@ const AGENTS = {
 // ── Rate Limiting ────────────────────────────────────────────────
 
 const RATE_LIMITS = {
-  goalCooldownMs: 30000,        // 30 seconds between goals
+  goalCooldownMs: 15000,        // 15 seconds between goals
   maxGoalsPerHour: 10,          // Maximum goals per rolling hour
   oneHourMs: 3600000,           // One hour in milliseconds
 };
@@ -62,6 +62,8 @@ const BUDGET = {
   maxPerTask: 0.25,             // Maximum USDC per individual task
   defaultTotal: 5.0,            // Default orchestrator budget
   defaultPerTask: 1.0,          // Default max per task
+  minBalance: 0.01,             // Minimum USDC to start a goal
+  defaultMaxPrice: 0.5,         // Default price cap when no registry price
 };
 
 // ── System ───────────────────────────────────────────────────────
@@ -73,4 +75,12 @@ const SYSTEM = {
   deployedUrl: process.env.DEPLOYED_URL || null,
 };
 
-module.exports = { AGENTS, RATE_LIMITS, BUDGET, SYSTEM };
+// ── Locus API ─────────────────────────────────────────────────
+
+const LOCUS = {
+  baseUrl: process.env.LOCUS_BASE_URL || 'https://api.paywithlocus.com/api',
+  betaUrl: process.env.LOCUS_BETA_URL || 'https://beta-api.paywithlocus.com/api',
+  statusPendingApproval: 202,
+};
+
+module.exports = { AGENTS, RATE_LIMITS, BUDGET, SYSTEM, LOCUS };

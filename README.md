@@ -123,9 +123,10 @@ If escrow is unavailable, the system falls back to direct Locus wallet-to-wallet
 
 - **Rate limiting**: 30-second cooldown between goals, max 10 per hour
 - **Budget caps**: Hardcoded max $1.00 per goal, $0.25 per task
-- **Spending controls**: Locus approval threshold and allowance caps
+- **Spending controls**: Locus approval threshold and allowance caps. Payments exceeding the threshold return an approval URL for human review, surfaced directly in the dashboard
 - **Balance verification**: Orchestrator checks its wallet before starting
 - **Escrow**: Funds are locked before work begins, released only on delivery
+- **Payment retry**: Failed payments are retried before falling back to email escrow, preventing silent fund loss
 
 ## Setup
 
@@ -138,6 +139,7 @@ If escrow is unavailable, the system falls back to direct Locus wallet-to-wallet
 
 ```bash
 npm install
+npm run build
 ```
 
 ### Configure
@@ -165,7 +167,7 @@ npm run setup
 npm start
 ```
 
-Open http://localhost:3000 in your browser.
+Open http://localhost:3001 in your browser.
 
 ## API
 
@@ -206,7 +208,7 @@ The web dashboard shows the full agent economy in real time:
 - **Currency**: USDC
 - **Search**: Exa + Firecrawl via Locus wrapped APIs
 - **LLMs**: Gemini + Grok via Locus wrapped APIs
-- **Frontend**: Vanilla HTML/CSS/JS with SSE
+- **Frontend**: Next.js / React with SSE
 
 ## License
 

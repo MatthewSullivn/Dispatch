@@ -16,6 +16,8 @@ class ServiceRegistry {
   constructor() {
     /** @type {Map<string, object>} Registered services by ID */
     this.services = new Map();
+    /** @type {Map<string, object>} Agent reputation scores by agent name */
+    this.reputation = new Map();
   }
 
   /**
@@ -118,11 +120,59 @@ class ServiceRegistry {
       .map(s => this._sanitize(s));
   }
 
+  // ── Reputation System ─────────────────────────────────────────
+
+  /**
+   * Record a task completion outcome for an agent.
+   * @param {string} agentName - Agent that performed the task
+   * @param {boolean} success - Whether the task succeeded
+   * @param {number} paymentAmount - USDC paid for the task
+   */
+  recordOutcome(agentName, success, paymentAmount = 0) {
+    const rep = this.reputation.get(agentName) || {
+      completed: 0, failed: 0, totalEarned: 0, score: 1.0,
+    };
+    if (success) {
+      rep.completed++;
+      rep.totalEarned += paymentAmount;
+    } else {
+      rep.failed++;
+    }
+    const total = rep.completed + rep.failed;
+    rep.score = total > 0 ? rep.completed / total : 1.0;
+    this.reputation.set(agentName, rep);
+  }
+
+  /**
+   * Get reputation data for an agent.
+   * @param {string} agentName - Agent to look up
+   * @returns {object} Reputation with completed, failed, totalEarned, score
+   */
+  getReputation(agentName) {
+    return this.reputation.get(agentName) || {
+      completed: 0, failed: 0, totalEarned: 0, score: 1.0,
+    };
+  }
+
+  /**
+   * Get all agent reputations.
+   * @returns {Array<object>} All reputation records
+   */
+  getAllReputations() {
+    const reps = [];
+    for (const [agent, rep] of this.reputation) {
+      reps.push({ agent, ...rep });
+    }
+    return reps;
+  }
+
   /**
    * Strip sensitive fields (API keys) before returning service data.
    * @private
    */
   _sanitize({ locusApiKey, ...safe }) {
+    const rep = this.reputation.get(safe.agentName);
+    if (rep) safe.reputation = rep.score;
     return safe;
   }
 }

@@ -114,6 +114,56 @@ describe('EscrowManager', () => {
   });
 });
 
+describe('Reputation System', () => {
+  it('should start with perfect score', () => {
+    const registry = new ServiceRegistry();
+    const rep = registry.getReputation('TestAgent');
+    assert.equal(rep.score, 1.0);
+    assert.equal(rep.completed, 0);
+    assert.equal(rep.failed, 0);
+  });
+
+  it('should track successful outcomes', () => {
+    const registry = new ServiceRegistry();
+    registry.recordOutcome('Agent1', true, 0.05);
+    registry.recordOutcome('Agent1', true, 0.05);
+    const rep = registry.getReputation('Agent1');
+    assert.equal(rep.completed, 2);
+    assert.equal(rep.failed, 0);
+    assert.equal(rep.score, 1.0);
+    assert.equal(rep.totalEarned, 0.10);
+  });
+
+  it('should track failed outcomes', () => {
+    const registry = new ServiceRegistry();
+    registry.recordOutcome('Agent1', true, 0.05);
+    registry.recordOutcome('Agent1', false, 0);
+    const rep = registry.getReputation('Agent1');
+    assert.equal(rep.completed, 1);
+    assert.equal(rep.failed, 1);
+    assert.equal(rep.score, 0.5);
+  });
+
+  it('should include reputation in sanitized service data', () => {
+    const registry = new ServiceRegistry();
+    registry.register('Agent1', '0x1', 'k1', {
+      name: 'Test', description: 'Test', price: 0.05, capabilities: ['test'],
+    });
+    registry.recordOutcome('Agent1', true, 0.05);
+    const all = registry.getAll();
+    assert.ok(all[0].reputation !== undefined);
+    assert.equal(all[0].reputation, 1.0);
+  });
+
+  it('should return all reputations', () => {
+    const registry = new ServiceRegistry();
+    registry.recordOutcome('A', true, 0.05);
+    registry.recordOutcome('B', false, 0);
+    const reps = registry.getAllReputations();
+    assert.equal(reps.length, 2);
+  });
+});
+
 describe('Input Validation Rules', () => {
   it('should reject empty goals', () => {
     assert.ok(!(''), 'Empty string is falsy');

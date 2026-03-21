@@ -162,6 +162,8 @@ function Home() {
   const [arrowsOn, setArrowsOn] = useState(false);
   const [hasRun, setHasRun] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [showTips, setShowTips] = useState(true);
+  const [tipIdx, setTipIdx] = useState(0);
   const stepDone6 = useRef(false);
   const tlRef = useRef<HTMLDivElement>(null);
 
@@ -416,7 +418,7 @@ function Home() {
     { id: "writer", key: "w", name: "Writer", role: "Synthesize via Locus LLMs", dotColor: "bg-[#ffe66d]", glowColor: "#ffe66d" },
   ];
 
-  const exampleChips = ["Top DeFi protocols on Base", "Locus vs traditional payment APIs", "What is ERC-8004?", "AI agent infrastructure trends"];
+  const exampleChips = ["Top DeFi protocols on Base", "Locus vs traditional payment APIs", "AI agent infrastructure trends", "Compare Solana vs Base L2", "ERC-8004 token standard explained"];
 
   return (
     <div className="flex w-full flex-col min-h-screen bg-black relative text-white/60">
@@ -481,6 +483,35 @@ function Home() {
                 <div className="text-[11px] text-white/40 leading-snug">{s.desc}</div>
               </div>
             ))}
+          </motion.div>
+        )}
+
+        {/* ── Guided Tips (first-time walkthrough) ── */}
+        {!hasRun && !running && showTips && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-[600px] mx-auto mb-6"
+          >
+            {(() => {
+              const tips = [
+                { icon: "💡", text: "Pick a topic from the chips or type your own research question. Budget controls how much USDC agents can spend." },
+                { icon: "🔒", text: "Every payment is escrowed before work starts. Agents can't run off with your funds — Locus holds them until delivery." },
+                { icon: "📊", text: "Watch the live timeline for real-time agent activity. Every API call and payment appears as it happens." },
+                { icon: "🔗", text: "All transactions are real USDC on Base. Click any wallet address to verify on BaseScan." },
+              ];
+              const tip = tips[tipIdx % tips.length];
+              return (
+                <div className="flex items-center gap-3 px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-[12px] text-white/50">
+                  <span className="text-base shrink-0">{tip.icon}</span>
+                  <span className="flex-1">{tip.text}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button onClick={() => setTipIdx(prev => (prev + 1) % tips.length)} className="text-[10px] text-white/40 hover:text-white/70 transition-colors px-2 py-0.5 rounded-full border border-white/10 hover:border-white/25">Next</button>
+                    <button onClick={() => setShowTips(false)} className="text-[10px] text-white/30 hover:text-white/50 transition-colors px-2 py-0.5">Dismiss</button>
+                  </div>
+                </div>
+              );
+            })()}
           </motion.div>
         )}
 
@@ -855,7 +886,7 @@ function Home() {
                 { icon: "◇", title: "Escrow-First Payments", desc: "Funds locked before work starts. Workers verify via preflight. Payment releases only on delivery.", tag: "working today", tagCls: "bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/15" },
                 { icon: "◊", title: "Pay-Per-Use Intelligence", desc: "Agents call search, scraping, and LLM APIs through Locus. Pay per call in USDC. Costs on-chain.", tag: "working today", tagCls: "bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/15" },
                 { icon: "△", title: "Competitive Bidding", desc: "Multiple agents, same capability, different prices. Market competition drives quality up and cost down.", tag: "next milestone", tagCls: "bg-white/6 text-white/50 border-white/10" },
-                { icon: "▵", title: "Reputation Scoring", desc: "Track completion rates and quality on-chain. Orchestrators factor reputation into hiring decisions.", tag: "next milestone", tagCls: "bg-white/6 text-white/50 border-white/10" },
+                { icon: "▵", title: "Reputation Scoring", desc: "Track completion rates and quality per agent. Orchestrator factors reputation into hiring when prices tie.", tag: "working today", tagCls: "bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/15" },
                 { icon: "○", title: "Cross-Network Federation", desc: "Agents from different networks discover and transact. Locus wallets bridge them seamlessly.", tag: "future vision", tagCls: "bg-white/4 text-white/35 border-white/8" },
               ].map(c => (
                 <div key={c.title} className="p-5 bg-black/90">

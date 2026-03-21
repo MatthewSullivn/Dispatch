@@ -30,6 +30,7 @@ const REASONING_ACTIONS = new Set([
   'subtasks_planned', 'agent_discovered', 'dispatching_task',
   'budget_exceeded', 'payment_initiated', 'payment_completed',
   'escrow_created', 'escrow_released', 'goal_received', 'goal_completed',
+  'dynamic_planning', 'validation_result', 'research_empty',
 ]);
 
 // ── App Setup ────────────────────────────────────────────────────
@@ -312,6 +313,32 @@ app.get('/api/registry/discover', (req, res) => {
   res.json({ results: registry.discover(q) });
 });
 
+/**
+ * Register an external agent's service in the marketplace.
+ * Allows third-party agents to join the mesh by advertising capabilities.
+ * The orchestrator will discover and hire them if they offer the best price.
+ */
+app.post('/api/registry/register', (req, res) => {
+  const { agentName, walletAddress, service } = req.body;
+  if (!agentName || typeof agentName !== 'string' || agentName.length > 100)
+    return res.status(400).json({ error: 'agentName is required (string, max 100 chars)' });
+  if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress))
+    return res.status(400).json({ error: 'walletAddress must be a valid Ethereum address' });
+  if (!service?.name || !service?.price || !Array.isArray(service?.capabilities))
+    return res.status(400).json({ error: 'service must include name, price, and capabilities array' });
+  if (typeof service.price !== 'number' || service.price <= 0 || service.price > 10)
+    return res.status(400).json({ error: 'service.price must be between 0 and 10 USDC' });
+
+  const entry = registry.register(agentName, walletAddress, '', {
+    name: String(service.name).slice(0, 100),
+    description: String(service.description || '').slice(0, 500),
+    price: service.price,
+    capabilities: service.capabilities.slice(0, 10).map(c => String(c).slice(0, 50)),
+  });
+
+  res.json({ success: true, serviceId: entry.id, message: 'Service registered. The orchestrator will discover it automatically.' });
+});
+
 /** All escrow sessions and their current status. */
 app.get('/api/escrows', (req, res) => {
   res.json({ escrows: escrowManager.getAll() });
@@ -373,15 +400,21 @@ app.get('/api/reasoning', (req, res) => {
   res.json({ reasoning: reasoningEvents });
 });
 
-/** Agent names, roles, and wallet addresses. */
+/** Agent names, roles, wallet addresses, and reputation scores. */
 app.get('/api/agents', (req, res) => {
   res.json({
     agents: allAgents().map(({ agent }) => ({
       name: agent?.name,
       role: agent?.role,
       wallet: agent?.walletAddress,
+      reputation: registry.getReputation(agent?.name),
     })),
   });
+});
+
+/** Agent reputation scores from task completion history. */
+app.get('/api/reputation', (req, res) => {
+  res.json({ reputations: registry.getAllReputations() });
 });
 
 /** On-chain USDC transactions aggregated from all agent wallets. */

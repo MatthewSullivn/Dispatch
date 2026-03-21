@@ -18,6 +18,47 @@ const BASE_URL = LOCUS.baseUrl;
 const BETA_URL = LOCUS.betaUrl;
 const STATUS_PENDING_APPROVAL = LOCUS.statusPendingApproval;
 
+// ── Circuit Breaker ─────────────────────────────────────────────
+// Prevents cascading failures when the Locus API is down.
+// After THRESHOLD consecutive failures, the breaker opens and
+// rejects requests for RESET_MS before allowing a retry.
+
+const CB_THRESHOLD = 5;       // Consecutive failures to trip
+const CB_RESET_MS = 30000;    // 30s cooldown before retry
+
+class CircuitBreaker {
+  constructor() {
+    this.failures = 0;
+    this.state = 'closed';    // closed | open | half-open
+    this.openedAt = 0;
+  }
+
+  /** Check if the circuit allows a request. */
+  canRequest() {
+    if (this.state === 'closed') return true;
+    if (this.state === 'open' && Date.now() - this.openedAt > CB_RESET_MS) {
+      this.state = 'half-open';
+      return true;
+    }
+    return this.state === 'half-open';
+  }
+
+  /** Record a successful response — reset the breaker. */
+  onSuccess() {
+    this.failures = 0;
+    this.state = 'closed';
+  }
+
+  /** Record a failure — trip the breaker if threshold reached. */
+  onFailure() {
+    this.failures++;
+    if (this.failures >= CB_THRESHOLD) {
+      this.state = 'open';
+      this.openedAt = Date.now();
+    }
+  }
+}
+
 /**
  * Authenticated client for a single Locus agent wallet.
  */
@@ -29,15 +70,20 @@ class LocusClient {
   constructor(apiKey, useBeta = true) {
     this.apiKey = apiKey;
     this.baseUrl = useBeta ? BETA_URL : BASE_URL;
+    this.breaker = new CircuitBreaker();
   }
 
   /**
    * Send an authenticated request to the Locus API.
+   * Protected by a circuit breaker — fails fast when Locus is unresponsive.
    * Returns { status: 'success' | 'pending_approval', data } on success.
-   * Throws on non-2xx responses (except 202 which indicates spending control hold).
    * @private
    */
   async _request(url, method = 'GET', body = null) {
+    if (!this.breaker.canRequest()) {
+      throw new Error('Locus API circuit breaker open — too many consecutive failures. Retrying in 30s.');
+    }
+
     const headers = {
       'Authorization': `Bearer ${this.apiKey}`,
       'Content-Type': 'application/json',
@@ -45,16 +91,24 @@ class LocusClient {
     const options = { method, headers, signal: AbortSignal.timeout(30000) };
     if (body) options.body = JSON.stringify(body);
 
-    const res = await fetch(url, options);
-    const data = await res.json();
+    try {
+      const res = await fetch(url, options);
+      const data = await res.json();
 
-    if (res.status === STATUS_PENDING_APPROVAL) {
-      return { status: 'pending_approval', data };
+      if (res.status === STATUS_PENDING_APPROVAL) {
+        this.breaker.onSuccess();
+        return { status: 'pending_approval', data };
+      }
+      if (!res.ok) {
+        this.breaker.onFailure();
+        throw new Error(`Locus API error ${res.status}: ${JSON.stringify(data)}`);
+      }
+      this.breaker.onSuccess();
+      return { status: 'success', data };
+    } catch (err) {
+      if (!err.message.includes('circuit breaker')) this.breaker.onFailure();
+      throw err;
     }
-    if (!res.ok) {
-      throw new Error(`Locus API error ${res.status}: ${JSON.stringify(data)}`);
-    }
-    return { status: 'success', data };
   }
 
   /** Get USDC balance for this agent's wallet. */

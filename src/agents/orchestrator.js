@@ -181,6 +181,12 @@ class OrchestratorAgent extends BaseAgent {
     }
 
     this.tasks.push(task);
+
+    // Record outcome for reputation scoring
+    if (this.registry) {
+      const success = task.status === 'completed' || task.status === 'completed_via_email';
+      this.registry.recordOutcome(agent.name, success, success ? task.payment : 0);
+    }
   }
 
   /**
@@ -320,7 +326,13 @@ class OrchestratorAgent extends BaseAgent {
       const capability = CAPABILITY_MAP[taskType] || taskType;
       const services = this.registry.findByCapability(capability);
       if (services.length > 0) {
-        const service = services[0]; // Sorted cheapest first
+        // Rank by price first, then reputation as tiebreaker
+        const service = services.sort((a, b) => {
+          if (a.price !== b.price) return a.price - b.price;
+          const repA = this.registry.getReputation(a.agentName).score;
+          const repB = this.registry.getReputation(b.agentName).score;
+          return repB - repA; // Higher reputation wins ties
+        })[0];
         for (const [, agent] of this.workers) {
           if (agent.walletAddress === service.walletAddress || agent.name === service.agentName) {
             this.log('agent_discovered', {

@@ -73,7 +73,7 @@ class EscrowManager {
     const session = {
       sessionId,
       checkoutUrl: sessionData?.checkoutUrl || sessionData?.checkout_url
-        || (sessionId ? `${LOCUS.checkoutUrl}/session/${sessionId}` : undefined),
+        || (sessionId ? `${LOCUS.checkoutUrl}/${sessionId}` : undefined),
       status: 'pending',
       amount,
       description,

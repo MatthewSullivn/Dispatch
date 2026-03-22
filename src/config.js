@@ -93,7 +93,7 @@ const SYSTEM = {
 const LOCUS = {
   baseUrl: process.env.LOCUS_BASE_URL || 'https://api.paywithlocus.com/api',
   betaUrl: process.env.LOCUS_BETA_URL || 'https://beta-api.paywithlocus.com/api',
-  checkoutUrl: 'https://checkout.paywithlocus.com',
+  checkoutUrl: 'https://beta-checkout.paywithlocus.com',
   paymentRouter: '0x34184b7bCB4E6519C392467402DB8a853EF57806',  // Base mainnet
   usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',   // USDC on Base (6 decimals)
   statusPendingApproval: 202,

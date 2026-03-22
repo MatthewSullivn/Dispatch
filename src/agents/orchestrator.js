@@ -352,17 +352,22 @@ class OrchestratorAgent extends BaseAgent {
           const repB = this.registry.getReputation(b.agentName).score;
           return repB - repA; // Higher reputation wins ties
         })[0];
+        // Match by name first, then wallet — avoids returning researcher
+        // for validate tasks when validator shares the same wallet.
+        let matched = null;
         for (const [, agent] of this.workers) {
-          if (agent.walletAddress === service.walletAddress || agent.name === service.agentName) {
-            this.log('agent_discovered', {
-              type: 'registry',
-              agent: service.agentName,
-              service: service.serviceName,
-              price: service.price,
-              reasoning: `Selected ${service.agentName} from registry — cheapest provider for "${capability}" at $${service.price} USDC/task.`,
-            });
-            return agent;
-          }
+          if (agent.name === service.agentName) { matched = agent; break; }
+          if (!matched && agent.walletAddress === service.walletAddress) matched = agent;
+        }
+        if (matched) {
+          this.log('agent_discovered', {
+            type: 'registry',
+            agent: service.agentName,
+            service: service.serviceName,
+            price: service.price,
+            reasoning: `Selected ${service.agentName} from registry — cheapest provider for "${capability}" at $${service.price} USDC/task.`,
+          });
+          return matched;
         }
       }
     }

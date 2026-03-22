@@ -959,7 +959,7 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
                 <span className="text-[10px] font-bold font-mono text-[#4ecdc4]">{e.sellerAgent}</span>
               </div>
               {e.description && <div className="text-white/70 text-[10px] mb-2">{e.description}</div>}
-              {e.sessionId && e.checkoutUrl && (
+              {e.sessionId && e.checkoutUrl && isPending && (
                 <div className="mt-2">
                   <div className="rounded-lg overflow-hidden border border-white/10" style={{ fontFamily: LOCUS_FONT_FAMILY }}>
                     <LocusCheckout
@@ -973,31 +973,29 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
                       style={{ minHeight: 200 }}
                     />
                   </div>
-                  {isPending && (
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => openPopup(e.sessionId)}
-                        style={{ background: LOCUS_CTA_GRADIENT }}
-                        className="text-[10px] font-bold text-white px-3 py-1 rounded-full border-none cursor-pointer hover:opacity-90 transition-opacity"
-                      >
-                        Pay in Popup
-                      </button>
-                      <button
-                        onClick={() => redirectToCheckout(e.sessionId)}
-                        className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 cursor-pointer"
-                      >
-                        Redirect
-                      </button>
-                      <a
-                        href={getCheckoutUrl(e.sessionId)}
-                        target="_blank"
-                        rel="noopener"
-                        className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 no-underline"
-                      >
-                        Direct Link
-                      </a>
-                    </div>
-                  )}
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => openPopup(e.sessionId)}
+                      style={{ background: LOCUS_CTA_GRADIENT }}
+                      className="text-[10px] font-bold text-white px-3 py-1 rounded-full border-none cursor-pointer hover:opacity-90 transition-opacity"
+                    >
+                      Pay in Popup
+                    </button>
+                    <button
+                      onClick={() => redirectToCheckout(e.sessionId)}
+                      className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 cursor-pointer"
+                    >
+                      Redirect
+                    </button>
+                    <a
+                      href={getCheckoutUrl(e.sessionId)}
+                      target="_blank"
+                      rel="noopener"
+                      className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 no-underline"
+                    >
+                      Direct Link
+                    </a>
+                  </div>
                 </div>
               )}
               {e.sessionId && isPending && !e.checkoutUrl && (
@@ -1006,7 +1004,27 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
                   <span className="text-[10px] text-white/50 font-mono">Agent-managed escrow &middot; {e.sessionId.slice(0, 8)}...</span>
                 </div>
               )}
-              {e.paidAt && (
+              {e.sessionId && e.checkoutUrl && !isPending && (
+                <div className="mt-2 rounded-lg border border-[#00d4aa]/20 bg-[#00d4aa]/5 p-3" style={{ fontFamily: LOCUS_FONT_FAMILY }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#00d4aa" fillOpacity="0.15"/><path d="M5 8.5L7 10.5L11 6" stroke="#00d4aa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span className="text-[11px] font-bold text-[#00d4aa]">Payment Complete</span>
+                    <span className="text-[10px] text-white/40 ml-auto font-mono">${String(e.amount)} USDC</span>
+                  </div>
+                  <div className="text-[9px] text-white/50 font-mono">
+                    Paid via Locus Wallet {e.paidAt && `· ${new Date(e.paidAt).toLocaleTimeString("en-US", { hour12: false })}`}
+                  </div>
+                  {(e as any).paymentTxHash && (
+                    <a href={`https://basescan.org/tx/${(e as any).paymentTxHash}`} target="_blank" rel="noopener" className="text-[9px] text-[#00d4aa]/50 hover:text-[#00d4aa]/80 font-mono mt-1 block no-underline">
+                      tx: {(e as any).paymentTxHash.slice(0, 14)}...
+                    </a>
+                  )}
+                  <a href={e.checkoutUrl} target="_blank" rel="noopener" className="text-[9px] text-white/30 hover:text-white/50 font-mono mt-1 block no-underline">
+                    View on Locus Checkout
+                  </a>
+                </div>
+              )}
+              {e.paidAt && !e.checkoutUrl && (
                 <div className="text-[9px] text-[#00d4aa]/70 font-mono mt-1">
                   Paid {new Date(e.paidAt).toLocaleTimeString("en-US", { hour12: false })}
                   {(e as any).paymentTxHash && (

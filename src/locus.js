@@ -100,7 +100,10 @@ class LocusClient {
         return { status: 'pending_approval', data };
       }
       if (!res.ok) {
-        this.breaker.onFailure();
+        // Don't trip the circuit breaker for client errors (4xx) — these are
+        // policy/auth issues, not Locus being down. Only server errors (5xx)
+        // and timeouts should trip the breaker.
+        if (res.status >= 500) this.breaker.onFailure();
         throw new Error(`Locus API error ${res.status}: ${JSON.stringify(data)}`);
       }
       this.breaker.onSuccess();

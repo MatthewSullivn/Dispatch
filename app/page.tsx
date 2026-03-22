@@ -959,7 +959,7 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
                 <span className="text-[10px] font-bold font-mono text-[#4ecdc4]">{e.sellerAgent}</span>
               </div>
               {e.description && <div className="text-white/70 text-[10px] mb-2">{e.description}</div>}
-              {e.sessionId && isPending && e.checkoutUrl && (
+              {e.sessionId && e.checkoutUrl && (
                 <div className="mt-2">
                   <div className="rounded-lg overflow-hidden border border-white/10" style={{ fontFamily: LOCUS_FONT_FAMILY }}>
                     <LocusCheckout
@@ -972,48 +972,31 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
                       style={{ minHeight: 200 }}
                     />
                   </div>
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => openPopup(e.sessionId)}
-                      style={{ background: LOCUS_CTA_GRADIENT }}
-                      className="text-[10px] font-bold text-white px-3 py-1 rounded-full border-none cursor-pointer hover:opacity-90 transition-opacity"
-                    >
-                      Pay in Popup
-                    </button>
-                    <button
-                      onClick={() => redirectToCheckout(e.sessionId)}
-                      className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 cursor-pointer"
-                    >
-                      Redirect
-                    </button>
-                    <a
-                      href={getCheckoutUrl(e.sessionId)}
-                      target="_blank"
-                      rel="noopener"
-                      className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 no-underline"
-                    >
-                      Direct Link
-                    </a>
-                  </div>
-                </div>
-              )}
-              {e.sessionId && !isPending && (e.status === "released" || e.status === "paid") && (
-                <div className="mt-2 p-2.5 rounded-lg bg-[#00d4aa]/8 border border-[#00d4aa]/15">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#00d4aa] text-sm">✓</span>
-                    <span className="text-[10px] font-bold text-[#00d4aa]">Payment Complete</span>
-                    <span className="text-[9px] text-white/40 font-mono ml-auto">{e.sessionId.slice(0, 12)}...</span>
-                  </div>
-                  <div className="flex gap-2 mt-1.5">
-                    <a
-                      href={getCheckoutUrl(e.sessionId)}
-                      target="_blank"
-                      rel="noopener"
-                      className="text-[9px] text-white/50 hover:text-white/70 transition-colors font-mono no-underline"
-                    >
-                      View on Locus →
-                    </a>
-                  </div>
+                  {isPending && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => openPopup(e.sessionId)}
+                        style={{ background: LOCUS_CTA_GRADIENT }}
+                        className="text-[10px] font-bold text-white px-3 py-1 rounded-full border-none cursor-pointer hover:opacity-90 transition-opacity"
+                      >
+                        Pay in Popup
+                      </button>
+                      <button
+                        onClick={() => redirectToCheckout(e.sessionId)}
+                        className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 cursor-pointer"
+                      >
+                        Redirect
+                      </button>
+                      <a
+                        href={getCheckoutUrl(e.sessionId)}
+                        target="_blank"
+                        rel="noopener"
+                        className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 no-underline"
+                      >
+                        Direct Link
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
               {e.sessionId && isPending && !e.checkoutUrl && (

@@ -298,13 +298,14 @@ function Home() {
       if (a === "escrow_verified") { set(3, "done"); set(4, "active"); }
       if (a === "exa_search_completed" || a === "firecrawl_search_completed" || a === "research_completed") set(4, "done");
       if ((a === "escrow_released" || a === "payment_completed" || a === "payment_sent") && !stepDone6.current) { stepDone6.current = true; set(5, "done"); set(6, "active"); }
-      if (a === "validation_started" || a === "validation_result" || a === "dispatching_task" && ev.task?.includes("Fact")) set(6, "active");
-      if (a === "validation_completed" || a === "validation_result") { set(6, "done"); set(7, "active"); }
+      if (a === "validation_started" || a === "validation_result" || a === "validation_completed" || a === "validation_skipped" || (a === "dispatching_task" && ev.task?.includes("Fact"))) set(6, "active");
+      if (a === "validation_completed" || a === "validation_result" || a === "validation_skipped") { set(6, "done"); set(7, "active"); }
+      if (a === "task_failed" && ev.task?.includes("Fact")) { set(6, "done"); set(7, "active"); }
       if (a === "synthesis_completed") set(7, "done");
       if (a === "goal_completed") set(8, "done");
       if (a === "goal_received") set(0, "active");
       if (a === "dispatching_task" && ev.task?.includes("Research")) set(4, "active");
-      if (a === "dispatching_task" && ev.task?.includes("Synth")) set(7, "active");
+      if (a === "dispatching_task" && ev.task?.includes("Synth")) { set(6, "done"); set(7, "active"); }
       if ((a === "payment_initiated" || a === "payment_sent" || a === "payment_completed") && stepDone6.current) set(8, "active");
       return s;
     });
@@ -646,7 +647,7 @@ function Home() {
         {(running || hasRun) && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="grid grid-cols-2 gap-3 mb-12 max-md:grid-cols-1">
           {/* Timeline - full width */}
           <Panel title="Live Timeline" count={timeline.length} full>
-            <div ref={tlRef} className="max-h-[380px] overflow-y-auto space-y-0 scrollbar-thin">
+            <div ref={tlRef} className="space-y-0">
               {timeline.length === 0 ? <Empty>run a goal to see real-time agent activity</Empty> :
                 timeline.map((ev, i) => (
                   <div key={i} className="flex gap-2 py-[5px] items-baseline text-[11px] border-b border-white/[0.025] last:border-none animate-[slideIn_0.2s_ease]">
@@ -665,6 +666,7 @@ function Home() {
 
           {/* Marketplace */}
           <Panel title="Marketplace" count={services.length}>
+            <div className="text-[10px] text-white/45 mb-2 leading-snug">Orchestrator selects the cheapest agent per task. Reputation breaks ties.</div>
             {services.length === 0 ? <Empty>loading services...</Empty> :
               services.map((s, i) => (
                 <div key={i} className="flex items-center gap-3 p-3.5 bg-white/5 border border-white/8 rounded-xl mb-2 transition-all hover:border-white/15">
@@ -749,7 +751,7 @@ function Home() {
                 ))}
               </div>
             )}
-            <div className="p-4 max-h-[520px] overflow-y-auto text-xs leading-relaxed scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/15">
+            <div className="p-4 max-h-[520px] overflow-y-auto text-xs leading-relaxed">
               {reportLoading ? (
                 <div className="text-white/15 text-center py-8 text-[11px] font-medium animate-pulse">agents are researching and synthesizing...</div>
               ) : (() => {
@@ -795,9 +797,9 @@ function Home() {
             {reasoning.length === 0 ? <Empty>run a goal to see agent reasoning</Empty> :
               reasoning.map((ev, i) => (
                 <div key={i} className="flex gap-2 py-1.5 items-baseline text-[11px] border-b border-white/[0.025] last:border-none">
-                  <span className={`font-bold min-w-[75px] text-[10px] ${agentCls(ev.agent)}`}>{ev.agent || "mesh"}</span>
-                  <span className="font-mono text-[9px] text-white/35 min-w-[90px]">{ev.action}</span>
-                  <span className="text-white/55 text-[11px] leading-snug">
+                  <span className={`font-bold min-w-[85px] shrink-0 text-[10px] truncate ${agentCls(ev.agent)}`}>{ev.agent || "mesh"}</span>
+                  <span className="font-mono text-[9px] text-white/35 min-w-[100px] shrink-0 truncate">{ev.action}</span>
+                  <span className="text-white/55 text-[11px] leading-snug min-w-0 break-words">
                     {ev.reasoning || ev.goal || ev.task || ev.description || ""}
                     {ev.amount ? <span className="text-white font-mono font-bold ml-1">${ev.amount} USDC</span> : null}
                   </span>
@@ -814,7 +816,7 @@ function Home() {
         <FadeIn>
           <div id="about" className="grid grid-cols-3 gap-px mb-14 bg-white/8 rounded-2xl overflow-hidden max-md:grid-cols-1">
             {[
-              { title: "How it works", text: "Give a goal to the orchestrator. It discovers agents, escrows USDC via Locus, dispatches work, and releases payment on delivery. Every dollar tracked on-chain." },
+              { title: "How it works", text: "Give a goal to the orchestrator. It queries the service registry, selects the cheapest agent for each task (with reputation as tiebreaker), escrows USDC via Locus, dispatches work, and releases payment on delivery." },
               { title: "Why it matters", text: "AI agents can think and act, but can't safely pay each other. Dispatch gives every agent its own Locus wallet with spending controls, making autonomous coordination real." },
               { title: "Safety first", text: "Rate limiting, budget caps, Locus spending controls, checkout escrow, and full audit trails with agent reasoning logs. Every decision is explainable." },
             ].map(card => (
@@ -928,7 +930,7 @@ function Panel({ title, count, full, children }: { title: string; count?: number
           <span className="bg-white/10 px-2 py-0.5 rounded-full text-[10px] font-mono text-white/60">{count}</span>
         )}
       </div>
-      <div className="p-3 max-h-[380px] overflow-y-auto text-xs leading-relaxed scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/15">
+      <div className="p-3 max-h-[380px] overflow-y-auto text-xs leading-relaxed">
         {children}
       </div>
     </div>
@@ -958,7 +960,7 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
                 <span className="text-[10px] font-bold font-mono text-[#4ecdc4]">{e.sellerAgent}</span>
               </div>
               {e.description && <div className="text-white/70 text-[10px] mb-2">{e.description}</div>}
-              {e.sessionId && isPending && (
+              {e.sessionId && isPending && e.checkoutUrl && (
                 <div className="mt-2">
                   <div className="rounded-lg overflow-hidden border border-white/10" style={{ fontFamily: LOCUS_FONT_FAMILY }}>
                     <LocusCheckout
@@ -994,6 +996,12 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
                       Direct Link
                     </a>
                   </div>
+                </div>
+              )}
+              {e.sessionId && isPending && !e.checkoutUrl && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#ffe66d] animate-pulse" />
+                  <span className="text-[10px] text-white/50 font-mono">Agent-managed escrow &middot; {e.sessionId.slice(0, 8)}...</span>
                 </div>
               )}
               {e.paidAt && (

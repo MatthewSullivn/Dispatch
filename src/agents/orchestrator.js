@@ -151,6 +151,7 @@ class OrchestratorAgent extends BaseAgent {
     // Budget gate
     if (this.budget.spent + task.payment > this.budget.total) {
       this.log('budget_exceeded', { spent: this.budget.spent, taskCost: task.payment });
+      if (task.type === 'validate') this.log('validation_skipped', { reason: 'Budget exceeded' });
       task.status = 'skipped_budget';
       this.tasks.push(task);
       return;
@@ -160,6 +161,7 @@ class OrchestratorAgent extends BaseAgent {
     const agent = this._findAgent(task.type);
     if (!agent) {
       this.log('no_agent_found', { type: task.type });
+      if (task.type === 'validate') this.log('validation_skipped', { reason: 'No validator agent found' });
       task.status = 'no_agent';
       this.tasks.push(task);
       return;
@@ -196,8 +198,37 @@ class OrchestratorAgent extends BaseAgent {
   async _createEscrow(task, agent, goal) {
     if (!this.escrowManager) return null;
 
+    // Skip checkout escrow if this agent's wallet is shared with another
+    // worker that already has an active escrow session in this run.
+    // Locus can't handle multiple active checkout sessions from the same
+    // wallet — the second session stays PENDING and eventually expires.
+    const activeEscrows = this.escrowManager.getAll().filter(
+      s => s.status === 'pending' || s.status === 'preflight_ok' || s.status === 'released'
+    );
+    const walletAlreadyEscrowed = activeEscrows.some(
+      s => {
+        // Check if any other worker with the same wallet already has an escrow
+        for (const [, w] of this.workers) {
+          if (w !== agent && w.walletAddress === agent.walletAddress && w.name === s.sellerAgent) {
+            return true;
+          }
+        }
+        return false;
+      }
+    );
+    if (walletAlreadyEscrowed) {
+      this.log('escrow_skipped_shared_wallet', {
+        type: 'escrow',
+        agent: agent.name,
+        wallet: agent.walletAddress,
+        reasoning: `Skipping checkout escrow for ${agent.name} — wallet is shared with another agent that already has an active session. Falling back to direct payment.`,
+      });
+      return null;
+    }
+
     try {
-      const session = await this.escrowManager.createEscrow(this.locus, {
+      // Seller (worker) creates the checkout session so buyer (orchestrator) can pay it
+      const session = await this.escrowManager.createEscrow(agent.locus, {
         amount: task.payment,
         description: task.description,
         buyerAgent: this.name,
@@ -205,9 +236,9 @@ class OrchestratorAgent extends BaseAgent {
         metadata: { goal, taskType: task.type },
       });
 
-      // Worker verifies the escrow is valid via preflight
+      // Buyer (orchestrator) verifies the escrow is valid via preflight
       if (session?.sessionId) {
-        await this.escrowManager.preflight(agent.locus, session.sessionId);
+        await this.escrowManager.preflight(this.locus, session.sessionId);
       }
       return session;
     } catch (err) {
@@ -262,54 +293,57 @@ class OrchestratorAgent extends BaseAgent {
    * Marks task status based on outcome.
    */
   async _releasePayment(task, agent, escrowSession) {
-    const MAX_RETRIES = 1;
-    const RETRY_DELAY = 2000;
-
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // 1. Try checkout escrow release
+    if (escrowSession?.sessionId) {
       try {
-        if (escrowSession?.sessionId) {
-          await this.escrowManager.releasePayment(this.locus, escrowSession.sessionId);
-        } else {
-          await this.payAgent(agent.walletAddress, task.payment, task.description);
-        }
+        await this.escrowManager.releasePayment(this.locus, escrowSession.sessionId, agent.locus);
         this.budget.spent += task.payment;
         task.status = 'completed';
         return;
       } catch (err) {
-        if (attempt < MAX_RETRIES) {
-          this.log('payment_retry', {
-            attempt: attempt + 1,
-            error: err.message,
-            task: task.description,
-            reasoning: `Payment attempt ${attempt + 1} failed, retrying in ${RETRY_DELAY}ms...`,
-          });
-          await new Promise(r => setTimeout(r, RETRY_DELAY));
-          continue;
-        }
-
-        // Exhausted retries — try email escrow fallback
-        if (agent.agentEmail) {
-          try {
-            await this.payAgentViaEmail(agent.agentEmail, task.payment, task.description);
-            this.budget.spent += task.payment;
-            task.status = 'completed_via_email';
-            return;
-          } catch (emailErr) {
-            this.log('payment_failed', {
-              error: emailErr.message,
-              task: task.description,
-              reasoning: 'All payment methods exhausted after retry: checkout escrow, direct wallet, and email escrow all failed.',
-            });
-            task.status = 'work_done_unpaid';
-            task.error = emailErr.message;
-            return;
-          }
-        }
-        this.log('payment_failed', { error: err.message, task: task.description });
-        task.status = 'work_done_unpaid';
-        task.error = err.message;
+        this.log('escrow_pay_failed', {
+          error: err.message,
+          task: task.description,
+          reasoning: `Checkout pay failed: ${err.message}. Falling back to direct wallet payment.`,
+        });
       }
     }
+
+    // 2. Fall back to direct wallet payment
+    try {
+      await this.payAgent(agent.walletAddress, task.payment, task.description);
+      this.budget.spent += task.payment;
+      task.status = 'completed';
+      return;
+    } catch (err) {
+      this.log('direct_pay_failed', {
+        error: err.message,
+        task: task.description,
+        reasoning: `Direct wallet payment failed: ${err.message}. Trying email escrow.`,
+      });
+    }
+
+    // 3. Fall back to email escrow
+    if (agent.agentEmail) {
+      try {
+        await this.payAgentViaEmail(agent.agentEmail, task.payment, task.description);
+        this.budget.spent += task.payment;
+        task.status = 'completed_via_email';
+        return;
+      } catch (emailErr) {
+        this.log('payment_failed', {
+          error: emailErr.message,
+          task: task.description,
+          reasoning: 'All payment methods exhausted: checkout escrow, direct wallet, and email escrow all failed.',
+        });
+        task.status = 'work_done_unpaid';
+        task.error = emailErr.message;
+        return;
+      }
+    }
+
+    this.log('payment_failed', { task: task.description, reasoning: 'Checkout and direct wallet failed. No email configured for email escrow fallback.' });
+    task.status = 'work_done_unpaid';
   }
 
   // ── Private: Agent discovery and planning ──────────────────────

@@ -118,10 +118,13 @@ class EscrowManager {
    * @param {LocusClient} buyerLocusClient - Buyer's Locus client
    * @param {string} sessionId - Checkout session to release
    */
-  async releasePayment(buyerLocusClient, sessionId) {
+  async releasePayment(buyerLocusClient, sessionId, sellerLocusClient = null) {
     const session = this.sessions.get(sessionId);
 
     const result = await buyerLocusClient.checkoutPay(sessionId);
+    const payData = result.data?.data || result.data;
+    const txId = payData?.transactionId;
+
     if (session) {
       session.status = 'released';
       session.paidAt = new Date().toISOString();
@@ -137,7 +140,43 @@ class EscrowManager {
       seller: session?.sellerAgent,
     });
 
+    // Poll for on-chain confirmation (non-blocking best-effort)
+    if (txId && sellerLocusClient) {
+      this._pollConfirmation(sellerLocusClient, txId, sessionId).catch(() => {});
+    }
+
     return result;
+  }
+
+  /**
+   * Poll the checkout payment status until confirmed or timeout.
+   * Updates the session status when payment is confirmed on-chain.
+   * @private
+   */
+  async _pollConfirmation(sellerLocusClient, txId, sessionId, maxAttempts = 10) {
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const result = await sellerLocusClient.checkoutStatus(txId);
+        const data = result.data?.data || result.data;
+        if (data?.status === 'confirmed' || data?.status === 'PAID') {
+          const session = this.sessions.get(sessionId);
+          if (session) {
+            session.status = 'paid';
+            session.paymentTxHash = data.txHash || data.paymentTxHash;
+          }
+          meshEvents.emit('agent-event', {
+            timestamp: new Date().toISOString(),
+            agent: 'locus',
+            action: 'checkout_confirmed',
+            type: 'escrow',
+            sessionId,
+            txHash: data.txHash || data.paymentTxHash,
+          });
+          return;
+        }
+      } catch { /* seller may not have access, continue */ }
+    }
   }
 
   /** Get all escrow sessions. */

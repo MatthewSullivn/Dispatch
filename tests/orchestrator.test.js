@@ -15,8 +15,7 @@ process.env.RESEARCHER_LOCUS_API_KEY = 'test-res-key';
 process.env.RESEARCHER_WALLET_ADDRESS = '0xRES';
 process.env.WRITER_LOCUS_API_KEY = 'test-wri-key';
 process.env.WRITER_WALLET_ADDRESS = '0xWRI';
-process.env.VALIDATOR_LOCUS_API_KEY = 'test-val-key';
-process.env.VALIDATOR_WALLET_ADDRESS = '0xVAL';
+// Validator shares researcher's wallet — no separate credentials needed
 
 const OrchestratorAgent = require('../src/agents/orchestrator');
 const ServiceRegistry = require('../src/registry');

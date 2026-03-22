@@ -6,10 +6,9 @@
 const { describe, it, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 
-process.env.VALIDATOR_LOCUS_API_KEY = 'test-val-key';
-process.env.VALIDATOR_WALLET_ADDRESS = '0xVAL';
 process.env.RESEARCHER_LOCUS_API_KEY = 'test-res-key';
 process.env.RESEARCHER_WALLET_ADDRESS = '0xRES';
+// Validator uses researcher's wallet — no separate credentials
 
 const ValidatorAgent = require('../src/agents/validator-agent');
 

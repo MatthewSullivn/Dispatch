@@ -341,7 +341,7 @@ app.post('/api/registry/register', (req, res) => {
 
 /** All escrow sessions and their current status. */
 app.get('/api/escrows', (req, res) => {
-  res.json({ escrows: escrowManager.getAll() });
+  res.json({ escrows: [...escrowManager.getAll()].reverse() });
 });
 
 /** Payments held by Locus spending controls for human review. */

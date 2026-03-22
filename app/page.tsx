@@ -259,7 +259,7 @@ function Home() {
         if (!HIDDEN_ACTIONS.has(ev.action)) {
           setTimeline(prev => [...prev, ev]);
         }
-        if (ev.type === "escrow") loadEscrows();
+        if (ev.type === "escrow" || ev.action === "checkout_confirmed" || ev.action === "escrow_released") loadEscrows();
         if (ev.type === "approval") loadApprovals();
         if (ev.action?.includes("payment")) loadBalances();
         updateStepper(ev);
@@ -936,7 +936,16 @@ function Panel({ title, count, full, children }: { title: string; count?: number
   );
 }
 
-function PaidCheckoutEmbed({ sessionId }: { sessionId: string }) {
+function PaidCheckoutEmbed({ sessionId, status }: { sessionId: string; status: string }) {
+  if (status === "released") return (
+    <div className="rounded-lg overflow-hidden border border-white/10 flex items-center justify-center py-6" style={{ fontFamily: LOCUS_FONT_FAMILY }}>
+      <div className="text-center">
+        <div className="w-5 h-5 border-2 border-white/20 border-t-[#4101F6] rounded-full animate-spin mx-auto mb-2" />
+        <div className="text-[10px] text-white/40">Confirming payment on-chain...</div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="rounded-lg overflow-hidden border border-white/10" style={{ fontFamily: LOCUS_FONT_FAMILY }}>
       <LocusCheckout
@@ -1021,7 +1030,7 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
               )}
               {e.sessionId && !isPending && (e.status === "released" || e.status === "paid") && (
                 <div className="mt-2">
-                  <PaidCheckoutEmbed sessionId={e.sessionId} />
+                  <PaidCheckoutEmbed sessionId={e.sessionId} status={e.status} />
                 </div>
               )}
               {e.paidAt && (

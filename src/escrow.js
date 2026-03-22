@@ -144,32 +144,33 @@ class EscrowManager {
       seller: session?.sellerAgent,
     });
 
-    // Poll for on-chain confirmation (non-blocking best-effort).
-    // Use payer's client — they own the transaction. Using the merchant's
-    // client would fail (403) and trip the orchestrator's circuit breaker.
-    if (txId) {
-      this._pollConfirmation(payerLocusClient, txId, sessionId).catch(() => {});
+    // Poll session status for on-chain confirmation (non-blocking).
+    // Uses the merchant's client to check session status directly.
+    if (sessionId && merchantLocusClient) {
+      this._pollSessionStatus(merchantLocusClient, sessionId).catch(() => {});
     }
 
     return result;
   }
 
   /**
-   * Poll the checkout payment status until confirmed or timeout.
-   * Updates the session status when payment is confirmed on-chain.
+   * Poll the checkout session status until PAID or timeout.
+   * Updates the local session when Locus confirms the on-chain payment.
    * @private
    */
-  async _pollConfirmation(sellerLocusClient, txId, sessionId, maxAttempts = 10) {
+  async _pollSessionStatus(locusClient, sessionId, maxAttempts = 20) {
+    const baseUrl = locusClient.baseUrl;
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise(r => setTimeout(r, 3000));
       try {
-        const result = await sellerLocusClient.checkoutStatus(txId);
+        const result = await locusClient._request(`${baseUrl}/checkout/sessions/${sessionId}`);
         const data = result.data?.data || result.data;
-        if (data?.status === 'confirmed' || data?.status === 'PAID') {
+        if (data?.status === 'PAID') {
           const session = this.sessions.get(sessionId);
           if (session) {
             session.status = 'paid';
-            session.paymentTxHash = data.txHash || data.paymentTxHash;
+            session.paymentTxHash = data.paymentTxHash;
+            session.payerAddress = data.payerAddress;
           }
           meshEvents.emit('agent-event', {
             timestamp: new Date().toISOString(),
@@ -177,11 +178,11 @@ class EscrowManager {
             action: 'checkout_confirmed',
             type: 'escrow',
             sessionId,
-            txHash: data.txHash || data.paymentTxHash,
+            paymentTxHash: data.paymentTxHash,
           });
           return;
         }
-      } catch { /* seller may not have access, continue */ }
+      } catch { /* continue polling */ }
     }
   }
 

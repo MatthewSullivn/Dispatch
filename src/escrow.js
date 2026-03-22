@@ -10,6 +10,7 @@
  * wallet-to-wallet payment or email escrow.
  */
 const meshEvents = require('./event-bus');
+const { LOCUS } = require('./config');
 
 class EscrowManager {
   constructor() {
@@ -71,7 +72,8 @@ class EscrowManager {
 
     const session = {
       sessionId,
-      checkoutUrl: sessionData?.checkoutUrl,
+      checkoutUrl: sessionData?.checkoutUrl || sessionData?.checkout_url
+        || (sessionId ? `${LOCUS.checkoutUrl}/session/${sessionId}` : undefined),
       status: 'pending',
       amount,
       description,

@@ -198,32 +198,19 @@ class OrchestratorAgent extends BaseAgent {
   async _createEscrow(task, agent, goal) {
     if (!this.escrowManager) return null;
 
-    // Skip checkout escrow if this agent's wallet is shared with another
-    // worker that already has an active escrow session in this run.
-    // Locus can't handle multiple active checkout sessions from the same
-    // wallet — the second session stays PENDING and eventually expires.
-    const activeEscrows = this.escrowManager.getAll().filter(
-      s => s.status === 'pending' || s.status === 'preflight_ok' || s.status === 'released'
-    );
-    const walletAlreadyEscrowed = activeEscrows.some(
-      s => {
-        // Check if any other worker with the same wallet already has an escrow
-        for (const [, w] of this.workers) {
-          if (w !== agent && w.walletAddress === agent.walletAddress && w.name === s.sellerAgent) {
-            return true;
-          }
-        }
-        return false;
+    // Skip checkout escrow if this agent shares a wallet with another worker.
+    // Locus can't handle multiple checkout sessions from the same wallet —
+    // the second session stays PENDING and eventually expires.
+    for (const [, w] of this.workers) {
+      if (w !== agent && w.walletAddress === agent.walletAddress) {
+        this.log('escrow_skipped_shared_wallet', {
+          type: 'escrow',
+          agent: agent.name,
+          sharedWith: w.name,
+          reasoning: `Skipping checkout escrow for ${agent.name} — shares wallet with ${w.name}. Using direct payment.`,
+        });
+        return null;
       }
-    );
-    if (walletAlreadyEscrowed) {
-      this.log('escrow_skipped_shared_wallet', {
-        type: 'escrow',
-        agent: agent.name,
-        wallet: agent.walletAddress,
-        reasoning: `Skipping checkout escrow for ${agent.name} — wallet is shared with another agent that already has an active session. Falling back to direct payment.`,
-      });
-      return null;
     }
 
     try {

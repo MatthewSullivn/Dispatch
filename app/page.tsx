@@ -834,7 +834,7 @@ function Home() {
             <div className="font-mono text-[10px] text-white/50 uppercase tracking-[3px] mb-5 text-center font-semibold">Locus Integration</div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-px bg-white/8 rounded-xl overflow-hidden">
               {[
-                { name: "Agent Wallets", desc: "4 autonomous Locus wallets on Base. Agents hold, send, and receive USDC independently.", tag: "core" },
+                { name: "Agent Wallets", desc: "3 autonomous Locus wallets on Base. Orchestrator, researcher, and writer each hold, send, and receive USDC independently.", tag: "core" },
                 { name: "Checkout Session Escrow", desc: "Funds locked via checkout sessions. Worker preflight verifies. Payment released on delivery.", tag: "bonus" },
                 { name: "Pay-Per-Use Wrapped APIs", desc: "Exa, Firecrawl, Gemini, Grok through Locus. Each call billed in USDC.", tag: "bonus" },
                 { name: "Spending Controls", desc: "Approval thresholds and allowance caps. Payments above threshold require human approval.", tag: "bonus" },
@@ -892,7 +892,7 @@ function Home() {
 
             <div className="flex justify-center gap-14">
               {[
-                { num: "4", label: "Wallets" },
+                { num: "3", label: "Wallets" },
                 { num: "4", label: "Wrapped APIs" },
                 { num: "9", label: "Locus Features" },
                 { num: "100%", label: "On-Chain" },

@@ -366,14 +366,57 @@ app.get('/api/events/stream', (req, res) => {
   req.on('close', () => sseClients.delete(res));
 });
 
+/** Verify Locus webhook signature (HMAC-SHA256). */
+function verifyWebhookSignature(payload, signature, secret) {
+  if (!secret || !signature) return false;
+  const crypto = require('crypto');
+  const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(payload).digest('hex');
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  } catch { return false; }
+}
+
 /** Webhook endpoint for Locus checkout session status changes. */
-app.post('/api/webhooks/checkout', (req, res) => {
+app.post('/api/webhooks/checkout', express.text({ type: '*/*' }), (req, res) => {
+  const webhookSecret = process.env.LOCUS_WEBHOOK_SECRET;
+  const signature = req.headers['x-signature-256'];
+
+  // Verify signature if secret is configured
+  if (webhookSecret && !verifyWebhookSignature(
+    typeof req.body === 'string' ? req.body : JSON.stringify(req.body),
+    signature, webhookSecret
+  )) {
+    return res.status(401).json({ error: 'Invalid webhook signature' });
+  }
+
+  const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  const event = body.event;
+  const data = body.data || {};
+
+  // Update escrow session status based on webhook event
+  if (event === 'checkout.session.paid' && data.sessionId) {
+    const session = escrowManager.sessions.get(data.sessionId);
+    if (session) {
+      session.status = 'paid';
+      session.paidAt = data.paidAt || new Date().toISOString();
+      session.paymentTxHash = data.paymentTxHash;
+      session.payerAddress = data.payerAddress;
+    }
+  } else if (event === 'checkout.session.expired' && data.sessionId) {
+    const session = escrowManager.sessions.get(data.sessionId);
+    if (session) session.status = 'expired';
+  }
+
   meshEvents.emit('agent-event', {
-    timestamp: new Date().toISOString(),
+    timestamp: body.timestamp || new Date().toISOString(),
     agent: 'locus',
     action: 'checkout_webhook',
     type: 'escrow',
-    data: req.body,
+    sessionId: data.sessionId,
+    event,
+    amount: data.amount,
+    paymentTxHash: data.paymentTxHash,
+    payerAddress: data.payerAddress,
   });
   res.json({ received: true });
 });

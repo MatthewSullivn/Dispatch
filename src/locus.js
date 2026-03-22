@@ -155,7 +155,7 @@ class LocusClient {
    * @param {string|undefined} webhookUrl - HTTPS webhook for status updates
    * @param {object} metadata - Arbitrary metadata (buyer, seller, task info)
    */
-  async createCheckoutSession(amount, description, webhookUrl, metadata = {}) {
+  async createCheckoutSession(amount, description, webhookUrl, metadata = {}, receiptConfig = null, successUrl = null, cancelUrl = null) {
     const body = {
       amount: String(amount),
       description,
@@ -165,6 +165,11 @@ class LocusClient {
     if (webhookUrl && webhookUrl.startsWith('https')) {
       body.webhookUrl = webhookUrl;
     }
+    if (receiptConfig) {
+      body.receiptConfig = receiptConfig;
+    }
+    if (successUrl) body.successUrl = successUrl;
+    if (cancelUrl) body.cancelUrl = cancelUrl;
     return this._request(`${this.baseUrl}/checkout/sessions`, 'POST', body);
   }
 

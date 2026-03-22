@@ -45,11 +45,25 @@ class EscrowManager {
       ? `${deployedUrl}/api/webhooks/checkout`
       : undefined;
 
+    const successUrl = deployedUrl ? `${deployedUrl}/?checkout=success` : undefined;
+    const cancelUrl = deployedUrl ? `${deployedUrl}/?checkout=cancel` : undefined;
+
     const result = await locusClient.createCheckoutSession(
       amount,
       description,
       webhookUrl,
-      { ...metadata, buyerAgent, sellerAgent }
+      { ...metadata, buyerAgent, sellerAgent },
+      {
+        enabled: true,
+        fields: {
+          creditorName: `Dispatch — ${sellerAgent}`,
+          lineItems: [{ description, amount: String(amount) }],
+          subtotal: String(amount),
+          supportEmail: 'dispatch@mesh.ai',
+        },
+      },
+      successUrl,
+      cancelUrl
     );
 
     const sessionData = result.data?.data || result.data;

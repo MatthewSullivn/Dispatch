@@ -937,7 +937,7 @@ function Panel({ title, count, full, children }: { title: string; count?: number
 }
 
 function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
-  const { openPopup, redirectToCheckout, getCheckoutUrl } = useLocusCheckout();
+  const { openPopup, redirectToCheckout, getCheckoutUrl } = useLocusCheckout({ checkoutUrl: "https://beta-checkout.paywithlocus.com" });
   return (
     <Panel title="Escrow Sessions" count={escrows.length}>
       {escrows.length === 0 ? <Empty>no escrows yet</Empty> :
@@ -964,6 +964,7 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
                   <div className="rounded-lg overflow-hidden border border-white/10" style={{ fontFamily: LOCUS_FONT_FAMILY }}>
                     <LocusCheckout
                       sessionId={e.sessionId}
+                      checkoutUrl="https://beta-checkout.paywithlocus.com"
                       mode="embedded"
                       className="locus-checkout-embed"
                       onSuccess={(data: any) => console.log("[Dispatch] Checkout paid:", data.txHash, data.payerAddress)}

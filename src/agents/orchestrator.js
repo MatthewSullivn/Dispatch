@@ -200,13 +200,14 @@ class OrchestratorAgent extends BaseAgent {
 
     // Skip checkout escrow for the validator — it shares the researcher's
     // wallet, so Locus can't create a separate checkout session for it.
-    if (agent.role === 'validator') {
-      this.log('escrow_skipped_validator', {
+    // Payment is handled via the shared wallet's existing balance.
+    if (agent.walletAddress === this.workers.get('researcher')?.walletAddress && agent.role === 'validator') {
+      this.log('escrow_skipped_shared_wallet', {
         type: 'escrow',
         agent: agent.name,
-        reasoning: `Skipping checkout escrow for ${agent.name} — shares wallet with researcher. Using direct payment.`,
+        reasoning: `Skipping escrow for ${agent.name} — shares wallet with researcher. Validation cost covered by shared wallet balance.`,
       });
-      return null;
+      return { sessionId: null, skipPayment: true };
     }
 
     try {
@@ -277,6 +278,18 @@ class OrchestratorAgent extends BaseAgent {
    * Marks task status based on outcome.
    */
   async _releasePayment(task, agent, escrowSession) {
+    // Shared wallet — validation cost is covered, skip payment
+    if (escrowSession?.skipPayment) {
+      this.log('payment_skipped_shared_wallet', {
+        task: task.description,
+        amount: task.payment,
+        reasoning: `Payment skipped — ${agent.name} shares wallet with researcher. Validation billed through shared balance.`,
+      });
+      this.budget.spent += task.payment;
+      task.status = 'completed';
+      return;
+    }
+
     // 1. Try checkout escrow release
     if (escrowSession?.sessionId) {
       try {

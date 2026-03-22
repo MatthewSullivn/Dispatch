@@ -937,27 +937,15 @@ function Panel({ title, count, full, children }: { title: string; count?: number
 }
 
 function PaidCheckoutEmbed({ sessionId }: { sessionId: string }) {
-  const [ts, setTs] = useState(0);
-  useEffect(() => {
-    // Delay initial load by 8s to let Locus confirm the on-chain payment
-    const t = setTimeout(() => setTs(Date.now()), 8000);
-    return () => clearTimeout(t);
-  }, [sessionId]);
-  if (!ts) return (
-    <div className="rounded-lg overflow-hidden border border-white/10 flex items-center justify-center" style={{ fontFamily: LOCUS_FONT_FAMILY, minHeight: 200, background: LOCUS_BRAND_COLORS.surface }}>
-      <div className="text-center">
-        <div className="text-[11px] text-white/50 mb-1">Confirming payment on-chain...</div>
-        <div className="w-5 h-5 border-2 border-white/20 border-t-[#4101F6] rounded-full animate-spin mx-auto" />
-      </div>
-    </div>
-  );
   return (
     <div className="rounded-lg overflow-hidden border border-white/10" style={{ fontFamily: LOCUS_FONT_FAMILY }}>
-      <iframe
-        src={`https://beta-checkout.paywithlocus.com/${sessionId}?embed=true`}
-        style={{ border: "none", width: "100%", minHeight: 700, display: "block", backgroundColor: LOCUS_BRAND_COLORS.surfacePage }}
-        title="Locus Checkout"
-        allow="payment"
+      <LocusCheckout
+        sessionId={sessionId}
+        checkoutUrl="https://beta-checkout.paywithlocus.com"
+        mode="embedded"
+        className="locus-checkout-paid"
+        onSuccess={(data: any) => console.log("[Dispatch] Session confirmed:", data.txHash)}
+        style={{ minHeight: 200 }}
       />
     </div>
   );
@@ -1031,7 +1019,7 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
                   <span className="text-[10px] text-white/50 font-mono">Agent-managed escrow &middot; {e.sessionId.slice(0, 8)}...</span>
                 </div>
               )}
-              {e.sessionId && e.checkoutUrl && !isPending && (
+              {e.sessionId && !isPending && (e.status === "released" || e.status === "paid") && (
                 <div className="mt-2">
                   <PaidCheckoutEmbed sessionId={e.sessionId} />
                 </div>

@@ -414,8 +414,7 @@ function Home() {
 
   const agents = [
     { id: "orchestrator", key: "o", name: "Orchestrator", role: "Discovers, budgets, pays", dotColor: "bg-[#ff6b6b]", glowColor: "#ff6b6b" },
-    { id: "researcher", key: "r", name: "Researcher", role: "Search + scrape via Locus", dotColor: "bg-[#4ecdc4]", glowColor: "#4ecdc4" },
-    { id: "validator", key: "v", name: "Validator", role: "Fact-check via Locus LLMs", dotColor: "bg-[#a78bfa]", glowColor: "#a78bfa" },
+    { id: "researcher", key: "r", name: "Researcher + Validator", role: "Search, scrape & fact-check", dotColor: "bg-[#4ecdc4]", glowColor: "#4ecdc4" },
     { id: "writer", key: "w", name: "Writer", role: "Synthesize via Locus LLMs", dotColor: "bg-[#ffe66d]", glowColor: "#ffe66d" },
   ];
 
@@ -597,7 +596,7 @@ function Home() {
             {agents.map((agent, i) => (
               <React.Fragment key={agent.id}>
                 <AgentCard agent={agent} balances={balances} activeAgents={activeAgents} running={running} />
-                {i < 3 && (
+                {i < agents.length - 1 && (
                   <div className="px-2 text-center">
                     <div className={`w-8 h-px mx-auto relative ${arrowsOn ? "bg-white/30" : "bg-white/12"}`}>
                       <span className={`absolute right-[-4px] top-[-2px] w-0 h-0 border-l-[5px] border-t-[3px] border-b-[3px] border-t-transparent border-b-transparent ${arrowsOn ? "border-l-white/40" : "border-l-white/20"}`} />
@@ -960,7 +959,7 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
                 <span className="text-[10px] font-bold font-mono text-[#4ecdc4]">{e.sellerAgent}</span>
               </div>
               {e.description && <div className="text-white/70 text-[10px] mb-2">{e.description}</div>}
-              {e.sessionId && e.checkoutUrl && (
+              {e.sessionId && isPending && e.checkoutUrl && (
                 <div className="mt-2">
                   <div className="rounded-lg overflow-hidden border border-white/10" style={{ fontFamily: LOCUS_FONT_FAMILY }}>
                     <LocusCheckout
@@ -973,34 +972,51 @@ function EscrowPanel({ escrows }: { escrows: Escrow[] }) {
                       style={{ minHeight: 200 }}
                     />
                   </div>
-                  {isPending && (
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => openPopup(e.sessionId)}
-                        style={{ background: LOCUS_CTA_GRADIENT }}
-                        className="text-[10px] font-bold text-white px-3 py-1 rounded-full border-none cursor-pointer hover:opacity-90 transition-opacity"
-                      >
-                        Pay in Popup
-                      </button>
-                      <button
-                        onClick={() => redirectToCheckout(e.sessionId)}
-                        className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 cursor-pointer"
-                      >
-                        Redirect
-                      </button>
-                      <a
-                        href={getCheckoutUrl(e.sessionId)}
-                        target="_blank"
-                        rel="noopener"
-                        className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 no-underline"
-                      >
-                        Direct Link
-                      </a>
-                    </div>
-                  )}
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => openPopup(e.sessionId)}
+                      style={{ background: LOCUS_CTA_GRADIENT }}
+                      className="text-[10px] font-bold text-white px-3 py-1 rounded-full border-none cursor-pointer hover:opacity-90 transition-opacity"
+                    >
+                      Pay in Popup
+                    </button>
+                    <button
+                      onClick={() => redirectToCheckout(e.sessionId)}
+                      className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 cursor-pointer"
+                    >
+                      Redirect
+                    </button>
+                    <a
+                      href={getCheckoutUrl(e.sessionId)}
+                      target="_blank"
+                      rel="noopener"
+                      className="text-[10px] font-bold text-white/70 hover:text-white transition-colors px-3 py-1 rounded-full border border-white/15 hover:border-white/30 bg-white/5 no-underline"
+                    >
+                      Direct Link
+                    </a>
+                  </div>
                 </div>
               )}
-              {e.sessionId && !e.checkoutUrl && isPending && (
+              {e.sessionId && !isPending && (e.status === "released" || e.status === "paid") && (
+                <div className="mt-2 p-2.5 rounded-lg bg-[#00d4aa]/8 border border-[#00d4aa]/15">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#00d4aa] text-sm">✓</span>
+                    <span className="text-[10px] font-bold text-[#00d4aa]">Payment Complete</span>
+                    <span className="text-[9px] text-white/40 font-mono ml-auto">{e.sessionId.slice(0, 12)}...</span>
+                  </div>
+                  <div className="flex gap-2 mt-1.5">
+                    <a
+                      href={getCheckoutUrl(e.sessionId)}
+                      target="_blank"
+                      rel="noopener"
+                      className="text-[9px] text-white/50 hover:text-white/70 transition-colors font-mono no-underline"
+                    >
+                      View on Locus →
+                    </a>
+                  </div>
+                </div>
+              )}
+              {e.sessionId && isPending && !e.checkoutUrl && (
                 <div className="mt-2 flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#ffe66d] animate-pulse" />
                   <span className="text-[10px] text-white/50 font-mono">Agent-managed escrow &middot; {e.sessionId.slice(0, 8)}...</span>

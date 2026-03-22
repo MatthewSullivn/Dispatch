@@ -464,7 +464,11 @@ app.get('/api/reputation', (req, res) => {
 app.get('/api/transactions', async (req, res) => {
   try {
     const all = [];
+    const fetchedWallets = new Set();
+    // Deduplicate: validator shares researcher's wallet, so only fetch once
     await Promise.all(allAgents().map(async ({ name, agent }) => {
+      if (fetchedWallets.has(agent.walletAddress)) return;
+      fetchedWallets.add(agent.walletAddress);
       try {
         const result = await agent.locus.getTransactions();
         const txns = result.data?.data?.transactions || result.data?.transactions || [];

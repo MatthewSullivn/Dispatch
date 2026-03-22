@@ -198,19 +198,15 @@ class OrchestratorAgent extends BaseAgent {
   async _createEscrow(task, agent, goal) {
     if (!this.escrowManager) return null;
 
-    // Skip checkout escrow if this agent shares a wallet with another worker.
-    // Locus can't handle multiple checkout sessions from the same wallet —
-    // the second session stays PENDING and eventually expires.
-    for (const [, w] of this.workers) {
-      if (w !== agent && w.walletAddress === agent.walletAddress) {
-        this.log('escrow_skipped_shared_wallet', {
-          type: 'escrow',
-          agent: agent.name,
-          sharedWith: w.name,
-          reasoning: `Skipping checkout escrow for ${agent.name} — shares wallet with ${w.name}. Using direct payment.`,
-        });
-        return null;
-      }
+    // Skip checkout escrow for the validator — it shares the researcher's
+    // wallet, so Locus can't create a separate checkout session for it.
+    if (agent.role === 'validator') {
+      this.log('escrow_skipped_validator', {
+        type: 'escrow',
+        agent: agent.name,
+        reasoning: `Skipping checkout escrow for ${agent.name} — shares wallet with researcher. Using direct payment.`,
+      });
+      return null;
     }
 
     try {

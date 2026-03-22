@@ -211,9 +211,9 @@ class OrchestratorAgent extends BaseAgent {
     }
 
     try {
-      // Worker creates the checkout session (seller/merchant for their service).
-      // Orchestrator is the buyer who will pay for the work.
-      const session = await this.escrowManager.createEscrow(agent.locus, {
+      // Orchestrator creates the checkout session (coordinator/merchant).
+      // Worker pays to confirm delivery. Sessions track on orchestrator's dashboard.
+      const session = await this.escrowManager.createEscrow(this.locus, {
         amount: task.payment,
         description: task.description,
         buyerAgent: this.name,
@@ -221,9 +221,9 @@ class OrchestratorAgent extends BaseAgent {
         metadata: { goal, taskType: task.type },
       });
 
-      // Orchestrator (buyer) verifies the escrow is valid via preflight
+      // Worker verifies the escrow is valid via preflight
       if (session?.sessionId) {
-        await this.escrowManager.preflight(this.locus, session.sessionId);
+        await this.escrowManager.preflight(agent.locus, session.sessionId);
       }
       return session;
     } catch (err) {
@@ -293,8 +293,8 @@ class OrchestratorAgent extends BaseAgent {
     // 1. Try checkout escrow release
     if (escrowSession?.sessionId) {
       try {
-        // Orchestrator (buyer) pays the checkout session — worker is the merchant
-        await this.escrowManager.releasePayment(this.locus, escrowSession.sessionId, agent.locus);
+        // Worker pays the checkout session — orchestrator (merchant) polls status
+        await this.escrowManager.releasePayment(agent.locus, escrowSession.sessionId, this.locus);
         this.budget.spent += task.payment;
         task.status = 'completed';
         return;

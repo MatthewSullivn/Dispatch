@@ -117,10 +117,10 @@ class EscrowManager {
 
   /**
    * Release escrowed funds after work is delivered.
-   * Orchestrator (buyer) pays the checkout session created by the worker (merchant/seller).
-   * @param {LocusClient} payerLocusClient - Orchestrator/buyer's Locus client
+   * Orchestrator (buyer) pays the checkout session created by the worker (seller/merchant).
+   * @param {LocusClient} payerLocusClient - Orchestrator's Locus client (pays the session)
    * @param {string} sessionId - Checkout session to release
-   * @param {LocusClient} merchantLocusClient - Worker/merchant's Locus client (for polling)
+   * @param {LocusClient} merchantLocusClient - Worker's Locus client (polls session status)
    */
   async releasePayment(payerLocusClient, sessionId, merchantLocusClient = null) {
     const session = this.sessions.get(sessionId);

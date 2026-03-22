@@ -549,7 +549,7 @@ function Home() {
             </button>
           </div>
           <div className="flex gap-6 mt-3 justify-center text-xs text-white/60 font-medium">
-            <span>Budget <input type="number" value={budget} onChange={e => setBudget(parseFloat(e.target.value) || 1)} min={0.1} step={0.25} className="w-[60px] bg-transparent border border-white/15 rounded-full px-2.5 py-1 text-white/80 font-mono text-[11px] outline-none text-center focus:border-white/35 mx-1" /> USDC</span>
+            <span>Budget <input type="number" value={budget} onChange={e => setBudget(parseFloat(e.target.value) || 1)} min={0.1} step={0.25} className="w-[72px] bg-transparent border border-white/15 rounded-full pl-2.5 pr-4 py-1 text-white/80 font-mono text-[11px] outline-none text-center focus:border-white/35 mx-1" /> USDC</span>
             <span>Max per task <input type="number" value={maxPerTask} onChange={e => setMaxPerTask(parseFloat(e.target.value) || 0.25)} min={0.05} step={0.05} className="w-[72px] bg-transparent border border-white/15 rounded-full pl-2.5 pr-4 py-1 text-white/80 font-mono text-[11px] outline-none text-center focus:border-white/35 mx-1" /> USDC</span>
           </div>
         </motion.div>

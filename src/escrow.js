@@ -30,16 +30,6 @@ class EscrowManager {
    * @returns {object} Session with sessionId, status, amount
    */
   async createEscrow(locusClient, { amount, description, buyerAgent, sellerAgent, metadata = {} }) {
-    meshEvents.emit('agent-event', {
-      timestamp: new Date().toISOString(),
-      agent: buyerAgent,
-      action: 'escrow_created',
-      type: 'escrow',
-      amount,
-      description,
-      seller: sellerAgent,
-    });
-
     // Only pass webhookUrl if we have a deployed HTTPS URL (localhost causes 500)
     const deployedUrl = process.env.DEPLOYED_URL;
     const webhookUrl = deployedUrl && deployedUrl.startsWith('https')
@@ -82,6 +72,17 @@ class EscrowManager {
       createdAt: new Date().toISOString(),
     };
     if (sessionId) this.sessions.set(sessionId, session);
+
+    // Emit after successful API call — avoids misleading events when creation fails
+    meshEvents.emit('agent-event', {
+      timestamp: new Date().toISOString(),
+      agent: buyerAgent,
+      action: 'escrow_created',
+      type: 'escrow',
+      amount,
+      description,
+      seller: sellerAgent,
+    });
 
     return session;
   }
@@ -143,9 +144,11 @@ class EscrowManager {
       seller: session?.sellerAgent,
     });
 
-    // Poll for on-chain confirmation (non-blocking best-effort)
-    if (txId && merchantLocusClient) {
-      this._pollConfirmation(merchantLocusClient, txId, sessionId).catch(() => {});
+    // Poll for on-chain confirmation (non-blocking best-effort).
+    // Use payer's client — they own the transaction. Using the merchant's
+    // client would fail (403) and trip the orchestrator's circuit breaker.
+    if (txId) {
+      this._pollConfirmation(payerLocusClient, txId, sessionId).catch(() => {});
     }
 
     return result;

@@ -210,17 +210,17 @@ class OrchestratorAgent extends BaseAgent {
     }
 
     try {
-      // Orchestrator creates the checkout session and pays it — this is the
-      // pattern that shows "Locus Wallet" on the merchant dashboard.
+      // Orchestrator creates the checkout session (merchant) — sessions show
+      // on orchestrator's dashboard.  Worker is the buyer who will pay.
       const session = await this.escrowManager.createEscrow(this.locus, {
         amount: task.payment,
         description: task.description,
-        buyerAgent: this.name,
-        sellerAgent: agent.name,
+        buyerAgent: agent.name,
+        sellerAgent: this.name,
         metadata: { goal, taskType: task.type },
       });
 
-      // Worker verifies the escrow is valid via preflight
+      // Worker (buyer) verifies the escrow is valid via preflight
       if (session?.sessionId) {
         await this.escrowManager.preflight(agent.locus, session.sessionId);
       }
@@ -280,7 +280,8 @@ class OrchestratorAgent extends BaseAgent {
     // 1. Try checkout escrow release
     if (escrowSession?.sessionId) {
       try {
-        await this.escrowManager.releasePayment(this.locus, escrowSession.sessionId, agent.locus);
+        // Worker (buyer) pays the checkout session — orchestrator is the merchant
+        await this.escrowManager.releasePayment(agent.locus, escrowSession.sessionId, this.locus);
         this.budget.spent += task.payment;
         task.status = 'completed';
         return;

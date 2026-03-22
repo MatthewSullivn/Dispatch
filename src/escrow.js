@@ -116,14 +116,15 @@ class EscrowManager {
 
   /**
    * Release escrowed funds after work is delivered.
-   * Buyer agent pays out the checkout session.
-   * @param {LocusClient} buyerLocusClient - Buyer's Locus client
+   * Worker (buyer) pays the checkout session created by the orchestrator (merchant).
+   * @param {LocusClient} payerLocusClient - Worker/buyer's Locus client (has funds)
    * @param {string} sessionId - Checkout session to release
+   * @param {LocusClient} merchantLocusClient - Orchestrator/merchant's Locus client (for polling)
    */
-  async releasePayment(buyerLocusClient, sessionId, sellerLocusClient = null) {
+  async releasePayment(payerLocusClient, sessionId, merchantLocusClient = null) {
     const session = this.sessions.get(sessionId);
 
-    const result = await buyerLocusClient.checkoutPay(sessionId);
+    const result = await payerLocusClient.checkoutPay(sessionId);
     const payData = result.data?.data || result.data;
     const txId = payData?.transactionId;
 
@@ -134,7 +135,7 @@ class EscrowManager {
 
     meshEvents.emit('agent-event', {
       timestamp: new Date().toISOString(),
-      agent: session?.buyerAgent || 'orchestrator',
+      agent: session?.buyerAgent || 'worker',
       action: 'escrow_released',
       type: 'escrow',
       sessionId,
@@ -143,8 +144,8 @@ class EscrowManager {
     });
 
     // Poll for on-chain confirmation (non-blocking best-effort)
-    if (txId && sellerLocusClient) {
-      this._pollConfirmation(sellerLocusClient, txId, sessionId).catch(() => {});
+    if (txId && merchantLocusClient) {
+      this._pollConfirmation(merchantLocusClient, txId, sessionId).catch(() => {});
     }
 
     return result;

@@ -13,14 +13,14 @@
 
 const AGENTS = {
   orchestrator: {
-    name: 'MeshOrchestrator',
+    name: 'DispatchOrchestrator',
     role: 'orchestrator',
     locusApiKey: process.env.ORCHESTRATOR_LOCUS_API_KEY,
     walletAddress: process.env.ORCHESTRATOR_WALLET_ADDRESS,
     email: process.env.ORCHESTRATOR_EMAIL || null,
   },
   researcher: {
-    name: 'MeshResearcher',
+    name: 'DispatchResearcher',
     role: 'researcher',
     locusApiKey: process.env.RESEARCHER_LOCUS_API_KEY,
     walletAddress: process.env.RESEARCHER_WALLET_ADDRESS,
@@ -33,7 +33,7 @@ const AGENTS = {
     },
   },
   writer: {
-    name: 'MeshWriter',
+    name: 'DispatchWriter',
     role: 'writer',
     locusApiKey: process.env.WRITER_LOCUS_API_KEY,
     walletAddress: process.env.WRITER_WALLET_ADDRESS,
@@ -46,7 +46,7 @@ const AGENTS = {
     },
   },
   validator: {
-    name: 'MeshValidator',
+    name: 'DispatchValidator',
     role: 'validator',
     locusApiKey: process.env.RESEARCHER_LOCUS_API_KEY,
     walletAddress: process.env.RESEARCHER_WALLET_ADDRESS,

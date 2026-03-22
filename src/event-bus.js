@@ -9,7 +9,7 @@ const EventEmitter = require('events');
 
 const MAX_LISTENERS = 50;
 
-const meshEvents = new EventEmitter();
-meshEvents.setMaxListeners(MAX_LISTENERS);
+const dispatchEvents = new EventEmitter();
+dispatchEvents.setMaxListeners(MAX_LISTENERS);
 
-module.exports = meshEvents;
+module.exports = dispatchEvents;

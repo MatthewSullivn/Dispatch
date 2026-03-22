@@ -10,7 +10,7 @@
  */
 const { LocusClient } = require('../locus');
 const { v4: uuidv4 } = require('uuid');
-const meshEvents = require('../event-bus');
+const dispatchEvents = require('../event-bus');
 
 const LOG_DETAIL_LIMIT = 200;
 
@@ -50,7 +50,7 @@ class BaseAgent {
       ...details,
     };
     this.taskLog.push(entry);
-    meshEvents.emit('agent-event', entry);
+    dispatchEvents.emit('agent-event', entry);
     console.log(`[${this.name}] ${action}`, JSON.stringify(details).slice(0, LOG_DETAIL_LIMIT));
     return entry;
   }

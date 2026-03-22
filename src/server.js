@@ -17,7 +17,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const { AGENTS, RATE_LIMITS, BUDGET, SYSTEM } = require('./config');
-const meshEvents = require('./event-bus');
+const dispatchEvents = require('./event-bus');
 const ServiceRegistry = require('./registry');
 const EscrowManager = require('./escrow');
 const OrchestratorAgent = require('./agents/orchestrator');
@@ -99,7 +99,7 @@ const masterTimeline = [];
 const sseClients = new Set();
 
 // Capture all agent events into the rolling timeline and SSE stream
-meshEvents.on('agent-event', (event) => {
+dispatchEvents.on('agent-event', (event) => {
   masterTimeline.push(event);
   if (masterTimeline.length > SYSTEM.maxTimelineEvents) masterTimeline.shift();
 
@@ -114,7 +114,7 @@ meshEvents.on('agent-event', (event) => {
  */
 function onApprovalNeeded(approval) {
   pendingApprovals.push(approval);
-  meshEvents.emit('agent-event', {
+  dispatchEvents.emit('agent-event', {
     timestamp: approval.timestamp,
     agent: approval.agent,
     action: 'approval_required',
@@ -407,7 +407,7 @@ app.post('/api/webhooks/checkout', express.text({ type: '*/*' }), (req, res) => 
     if (session) session.status = 'expired';
   }
 
-  meshEvents.emit('agent-event', {
+  dispatchEvents.emit('agent-event', {
     timestamp: body.timestamp || new Date().toISOString(),
     agent: 'locus',
     action: 'checkout_webhook',

@@ -10,9 +10,9 @@ const fs = require('fs');
 const path = require('path');
 
 const AGENTS = [
-  { name: 'MeshOrchestrator', description: 'Orchestrator agent that coordinates tasks and manages budget' },
-  { name: 'MeshResearcher', description: 'Research agent that gathers data via web scraping and search' },
-  { name: 'MeshWriter', description: 'Writer agent that synthesizes research into reports' },
+  { name: 'DispatchOrchestrator', description: 'Orchestrator agent that coordinates tasks and manages budget' },
+  { name: 'DispatchResearcher', description: 'Research agent that gathers data via web scraping and search' },
+  { name: 'DispatchWriter', description: 'Writer agent that synthesizes research into reports' },
 ];
 
 async function sleep(ms) {

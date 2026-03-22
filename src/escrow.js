@@ -9,7 +9,7 @@
  * If escrow creation fails, the orchestrator falls back to direct
  * wallet-to-wallet payment or email escrow.
  */
-const meshEvents = require('./event-bus');
+const dispatchEvents = require('./event-bus');
 const { LOCUS } = require('./config');
 
 class EscrowManager {
@@ -74,7 +74,7 @@ class EscrowManager {
     if (sessionId) this.sessions.set(sessionId, session);
 
     // Emit after successful API call — avoids misleading events when creation fails
-    meshEvents.emit('agent-event', {
+    dispatchEvents.emit('agent-event', {
       timestamp: new Date().toISOString(),
       agent: buyerAgent,
       action: 'escrow_created',
@@ -102,7 +102,7 @@ class EscrowManager {
       session.status = preflightData?.canPay ? 'preflight_ok' : 'preflight_failed';
     }
 
-    meshEvents.emit('agent-event', {
+    dispatchEvents.emit('agent-event', {
       timestamp: new Date().toISOString(),
       agent: session?.sellerAgent || 'worker',
       action: 'escrow_verified',
@@ -117,10 +117,10 @@ class EscrowManager {
 
   /**
    * Release escrowed funds after work is delivered.
-   * Worker (buyer) pays the checkout session created by the orchestrator (merchant).
-   * @param {LocusClient} payerLocusClient - Worker/buyer's Locus client (has funds)
+   * Orchestrator (buyer) pays the checkout session created by the worker (merchant/seller).
+   * @param {LocusClient} payerLocusClient - Orchestrator/buyer's Locus client
    * @param {string} sessionId - Checkout session to release
-   * @param {LocusClient} merchantLocusClient - Orchestrator/merchant's Locus client (for polling)
+   * @param {LocusClient} merchantLocusClient - Worker/merchant's Locus client (for polling)
    */
   async releasePayment(payerLocusClient, sessionId, merchantLocusClient = null) {
     const session = this.sessions.get(sessionId);
@@ -134,7 +134,7 @@ class EscrowManager {
       session.paidAt = new Date().toISOString();
     }
 
-    meshEvents.emit('agent-event', {
+    dispatchEvents.emit('agent-event', {
       timestamp: new Date().toISOString(),
       agent: session?.buyerAgent || 'worker',
       action: 'escrow_released',
@@ -172,7 +172,7 @@ class EscrowManager {
             session.paymentTxHash = data.paymentTxHash;
             session.payerAddress = data.payerAddress;
           }
-          meshEvents.emit('agent-event', {
+          dispatchEvents.emit('agent-event', {
             timestamp: new Date().toISOString(),
             agent: 'locus',
             action: 'checkout_confirmed',

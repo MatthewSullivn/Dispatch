@@ -10,7 +10,7 @@
  * are automatically discoverable.
  */
 const { v4: uuidv4 } = require('uuid');
-const meshEvents = require('./event-bus');
+const dispatchEvents = require('./event-bus');
 
 class ServiceRegistry {
   constructor() {
@@ -46,7 +46,7 @@ class ServiceRegistry {
       registeredAt: new Date().toISOString(),
     };
     this.services.set(id, entry);
-    meshEvents.emit('agent-event', {
+    dispatchEvents.emit('agent-event', {
       timestamp: entry.registeredAt,
       agent: agentName,
       action: 'service_registered',

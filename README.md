@@ -115,19 +115,19 @@ Any new agent can register a service with a price and capabilities. The orchestr
 ## Payment Flow
 
 1. Orchestrator checks its Locus wallet balance
-2. Creates a Locus checkout session (escrow) for the task amount
-3. Worker agent runs preflight to verify the escrow is valid
+2. Worker agent creates a Locus checkout session (merchant/seller)
+3. Orchestrator runs preflight to verify the escrow is valid (buyer)
 4. Worker performs the task (research or synthesis)
-5. Orchestrator releases the escrow -- USDC moves on-chain
+5. Orchestrator pays the checkout session -- USDC moves on-chain to the worker
 6. Transaction is confirmed on Base and logged in the audit trail
 
-If escrow is unavailable, the system falls back to direct Locus wallet-to-wallet payment.
+If escrow is unavailable, the system falls back to direct Locus wallet-to-wallet payment, then email escrow.
 
 ## Safety
 
 - **Rate limiting**: 15-second cooldown between goals, max 10 per hour
 - **CORS + API key auth**: Cross-origin protection and optional API key for write endpoints
-- **Unit tests**: 30+ tests covering orchestrator, validator, registry, config, and input validation (`npm test`)
+- **Unit tests**: 45 tests covering orchestrator, validator, registry, config, and input validation (`npm test`)
 - **Security headers**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
 - **Per-IP rate limiting**: Each client tracked independently to prevent single-source abuse
 - **Error boundary**: React error boundary catches frontend crashes gracefully

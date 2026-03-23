@@ -159,11 +159,10 @@ class EscrowManager {
    * @private
    */
   async _pollSessionStatus(locusClient, sessionId, maxAttempts = 20) {
-    const baseUrl = locusClient.baseUrl;
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise(r => setTimeout(r, 3000));
       try {
-        const result = await locusClient._request(`${baseUrl}/checkout/sessions/${sessionId}`);
+        const result = await locusClient.getCheckoutSession(sessionId);
         const data = result.data?.data || result.data;
         if (data?.status === 'PAID') {
           const session = this.sessions.get(sessionId);

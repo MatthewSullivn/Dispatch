@@ -226,6 +226,24 @@ class LocusClient {
       : `${this.baseUrl}/wrapped/md`;
     return this._request(url);
   }
+
+  /**
+   * Submit feedback to Locus after a goal completes.
+   * Helps Locus improve their API based on real agent usage.
+   * @param {string} message - Feedback message
+   * @param {object} metadata - Context about the goal execution
+   */
+  async submitFeedback(message, metadata = {}) {
+    return this._request(`${this.baseUrl}/feedback`, 'POST', { message, metadata });
+  }
+
+  /**
+   * Get the checkout session status directly.
+   * @param {string} sessionId - Checkout session ID
+   */
+  async getCheckoutSession(sessionId) {
+    return this._request(`${this.baseUrl}/checkout/sessions/${sessionId}`);
+  }
 }
 
 /**

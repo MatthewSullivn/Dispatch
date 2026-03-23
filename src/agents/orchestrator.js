@@ -106,6 +106,14 @@ class OrchestratorAgent extends BaseAgent {
       tasksCompleted: this.tasks.filter(t => t.status === 'completed').length,
     });
 
+    // Submit usage feedback to Locus (non-blocking)
+    if (this.locus.submitFeedback) {
+      this.locus.submitFeedback(
+        `Dispatch goal completed: ${this.tasks.filter(t => t.status === 'completed').length}/${this.tasks.length} tasks, $${this.budget.spent.toFixed(2)} spent`,
+        { goal, tasks: this.tasks.length, spent: this.budget.spent }
+      ).catch(() => {});
+    }
+
     return results;
   }
 

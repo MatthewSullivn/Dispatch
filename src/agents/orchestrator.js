@@ -5,10 +5,10 @@
  *   1. Verify wallet balance via Locus
  *   2. Plan subtasks (research + synthesis)
  *   3. Discover the cheapest agent for each task from the registry
- *   4. Create escrow via Locus checkout session
- *   5. Worker preflight verifies escrow
+ *   4. Worker creates escrow via Locus checkout session (merchant)
+ *   5. Orchestrator preflight verifies escrow (buyer)
  *   6. Worker executes the task
- *   7. Release payment (escrow, direct, or email escrow fallback)
+ *   7. Orchestrator releases payment (escrow, direct, or email escrow fallback)
  *   8. Generate full audit trail
  *
  * Payment priority: checkout escrow > direct wallet > email escrow.
@@ -211,9 +211,10 @@ class OrchestratorAgent extends BaseAgent {
     }
 
     try {
-      // Orchestrator creates the checkout session (coordinator/merchant).
-      // Worker pays to confirm delivery. Sessions track on orchestrator's dashboard.
-      const session = await this.escrowManager.createEscrow(this.locus, {
+      // Worker creates the checkout session (merchant/seller).
+      // Orchestrator pays after work is delivered (buyer).
+      // Sessions track on the worker's Locus merchant dashboard.
+      const session = await this.escrowManager.createEscrow(agent.locus, {
         amount: task.payment,
         description: task.description,
         buyerAgent: this.name,
@@ -221,9 +222,9 @@ class OrchestratorAgent extends BaseAgent {
         metadata: { goal, taskType: task.type },
       });
 
-      // Worker verifies the escrow is valid via preflight
+      // Orchestrator verifies the escrow is valid via preflight
       if (session?.sessionId) {
-        await this.escrowManager.preflight(agent.locus, session.sessionId);
+        await this.escrowManager.preflight(this.locus, session.sessionId);
       }
       return session;
     } catch (err) {
@@ -293,8 +294,8 @@ class OrchestratorAgent extends BaseAgent {
     // 1. Try checkout escrow release
     if (escrowSession?.sessionId) {
       try {
-        // Worker pays the checkout session — orchestrator (merchant) polls status
-        await this.escrowManager.releasePayment(agent.locus, escrowSession.sessionId, this.locus);
+        // Orchestrator (buyer) pays the worker's checkout session — worker (merchant) polls status
+        await this.escrowManager.releasePayment(this.locus, escrowSession.sessionId, agent.locus);
         this.budget.spent += task.payment;
         task.status = 'completed';
         return;
@@ -307,18 +308,29 @@ class OrchestratorAgent extends BaseAgent {
       }
     }
 
-    // 2. Fall back to direct wallet payment
-    try {
-      await this.payAgent(agent.walletAddress, task.payment, task.description);
-      this.budget.spent += task.payment;
-      task.status = 'completed';
-      return;
-    } catch (err) {
-      this.log('direct_pay_failed', {
-        error: err.message,
-        task: task.description,
-        reasoning: `Direct wallet payment failed: ${err.message}. Trying email escrow.`,
-      });
+    // 2. Fall back to direct wallet payment (with one retry)
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await this.payAgent(agent.walletAddress, task.payment, task.description);
+        this.budget.spent += task.payment;
+        task.status = 'completed';
+        return;
+      } catch (err) {
+        if (attempt === 1) {
+          this.log('payment_retry', {
+            error: err.message,
+            task: task.description,
+            reasoning: `Direct wallet payment failed (attempt 1): ${err.message}. Retrying in 2s.`,
+          });
+          await new Promise(r => setTimeout(r, 2000));
+        } else {
+          this.log('direct_pay_failed', {
+            error: err.message,
+            task: task.description,
+            reasoning: `Direct wallet payment failed after retry: ${err.message}. Trying email escrow.`,
+          });
+        }
+      }
     }
 
     // 3. Fall back to email escrow

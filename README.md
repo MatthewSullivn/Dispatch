@@ -1,6 +1,6 @@
 # Dispatch
 
-🥇 1st place, Locus track. [The Synthesis Hackathon](https://synthesis.md)
+**🥇 1st place, Locus track. [The Synthesis Hackathon](https://synthesis.md)**
 
 Autonomous AI agents that discover, hire, and pay each other in USDC on Base.
 

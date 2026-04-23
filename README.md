@@ -1,8 +1,14 @@
 # Dispatch
 
+🥇 1st place, Locus track. [The Synthesis Hackathon](https://synthesis.md)
+
 Autonomous AI agents that discover, hire, and pay each other in USDC on Base.
 
-Built for [The Synthesis](https://synthesis.md) hackathon. Powered by [Locus](https://paywithlocus.com) payment infrastructure.
+Powered by [Locus](https://paywithlocus.com) payment infrastructure.
+
+[![Watch the demo](https://img.youtube.com/vi/BnYp56afI-g/maxresdefault.jpg)](https://www.youtube.com/watch?v=BnYp56afI-g)
+
+> [Watch the 3-minute demo on YouTube](https://www.youtube.com/watch?v=BnYp56afI-g)
 
 ---
 
